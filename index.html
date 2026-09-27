@@ -29,15 +29,12 @@
     --borda: #323845;
     --texto: #f1f3f7;
     --texto-sec: #a4acbb;
-    --texto-feito: #6b7280;
     --accent: #4c8dff;
     --accent-hover: #3a78e8;
     --accent-texto: #7fb0ff;
     --accent-suave: #1f3358;
     --sucesso: #1f9d5a;
     --sucesso-hover: #1a8550;
-    --sucesso-texto: #5fd49a;
-    --sucesso-suave: #16392a;
     --aviso: #e0a526;
     --erro: #e5484d;
     --trilho: #2f3542;
@@ -102,53 +99,46 @@
   .btn-principal:disabled { background: var(--card); color: var(--texto-sec); cursor: default; }
   .btn-principal.azul { background: var(--accent); }
   .btn-principal.azul:hover:not(:disabled) { background: var(--accent-hover); }
+  .btn-principal.azul:disabled { background: var(--card); color: var(--texto-sec); }
   .versao { font-size: 12px; color: var(--texto-sec); text-align: center; opacity: .7; }
 
   /* -------------------------------------------------------- Área principal */
-  main { padding: 24px 28px 16px; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+  main { padding: 24px 28px 16px; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 16px; }
   .cabecalho { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .cabecalho h2 { margin: 0; font: 600 24px/1.3 var(--display); }
   #estado { color: var(--texto-sec); text-align: right; }
 
   .barra { height: 6px; border-radius: 3px; background: var(--trilho); overflow: hidden; flex: none; }
-  .barra > i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--cor, var(--accent)); transition: width .15s; }
-  #progresso { margin-top: 12px; }
+  .barra > i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--accent); transition: width .15s; }
+  #progresso { margin-top: -4px; }
 
   .vazio { flex: 1; display: grid; place-items: center; padding: 48px 16px; text-align: center; color: var(--texto-sec); }
 
-  #vista { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 8px; }
+  #vista { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
   .aviso-exemplo {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     padding: 10px 14px; border-radius: 8px; border: 1px dashed var(--borda); color: var(--texto-sec);
   }
-  .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 30px; }
-  #nome-trabalho { color: var(--texto-sec); overflow-wrap: anywhere; }
+
+  .card { background: var(--card); border: 1px solid var(--borda); border-radius: 10px; }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .stat { padding: 12px 16px; }
+  .stat b { display: block; font: 600 28px/1.25 var(--display); font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--texto-sec); font-size: 13px; }
+  /* O papel autocolante leva o destaque mais forte: é o que custa dinheiro se for trocado */
+  .stat.etiqueta { background: var(--etiqueta-fundo); border-color: var(--etiqueta-borda); }
+  .stat.etiqueta b, .stat.etiqueta span { color: var(--etiqueta-texto); }
+
+  .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
+  .topo .info { min-width: 0; }
+  #nome-trabalho { font-weight: 600; overflow-wrap: anywhere; }
+  .nota { font-size: 13px; color: var(--texto-sec); }
+  #btn-zip { width: auto; min-width: 200px; }
   .link {
-    height: 30px; padding: 0 8px; border: 0; border-radius: 6px; flex: none;
+    height: 26px; padding: 0 8px; border: 0; border-radius: 6px;
     background: transparent; color: var(--accent-texto); font-size: 13px; cursor: pointer;
   }
-  .link:hover:not(:disabled) { background: var(--card-hover); }
-  .link:disabled { opacity: .5; cursor: default; }
-  .link.discreto { color: var(--texto-sec); }
-  .link.perigo { color: var(--erro); }
-
-  /* Painel de destaque: o que o operador tem de ler antes de imprimir */
-  .painel {
-    margin-top: 8px; padding: 18px 16px; border-radius: 12px; border: 2px solid; text-align: center;
-    background: var(--accent-suave); border-color: var(--accent-suave); color: var(--accent-texto);
-  }
-  .painel[data-papel="3"] { background: var(--etiqueta-fundo); border-color: var(--etiqueta-borda); color: var(--etiqueta-texto); }
-  .painel[data-papel="ok"] { background: var(--sucesso-suave); border-color: var(--sucesso); color: var(--sucesso-texto); }
-  #p-bloco { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; }
-  #p-papel { margin: 2px 0; font: 600 32px/1.25 var(--display); letter-spacing: -0.01em; overflow-wrap: anywhere; }
-  #p-detalhe { white-space: pre-wrap; }
-  #btn-novo { width: 200px; margin: 12px auto 0; }
-
-  .accoes { display: flex; align-items: center; gap: 8px; margin: 12px 0 10px; flex-wrap: wrap; }
-  .accoes .btn-principal { width: auto; }
-  #btn-abrir { min-width: 130px; }
-  #btn-impresso { min-width: 170px; }
-  .accoes .link { margin-left: auto; }
+  .link:hover { background: var(--card-hover); }
 
   .pill {
     display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
@@ -158,29 +148,29 @@
   .pill[data-papel="3"] { background: var(--etiqueta-fundo); color: var(--etiqueta-texto); }
   .pill.exemplo { height: 28px; background: var(--etiqueta-fundo); color: var(--etiqueta-texto); }
 
-  /* Lista dos blocos. Clicar numa linha escolhe o bloco; duplo clique abre-o. */
-  .lista {
-    flex: 1; min-height: 120px; overflow-y: auto; padding: 6px;
-    background: var(--card); border: 1px solid var(--borda); border-radius: 10px;
-  }
+  /* Lista dos blocos, só leitura: pela ordem dos nomes, que é a ordem de impressão */
+  .lista { flex: 1; min-height: 120px; overflow-y: auto; padding: 6px; }
   .linha {
-    display: grid; grid-template-columns: 36px auto minmax(0, 1fr) auto 28px; column-gap: 10px; align-items: center;
-    width: 100%; margin-bottom: 2px; padding: 8px 6px; text-align: left; cursor: pointer;
-    background: var(--card); border: 1px solid var(--card); border-radius: 6px;
+    display: grid; grid-template-columns: 36px auto minmax(0, 1fr) auto; column-gap: 10px; align-items: center;
+    padding: 8px 10px 4px 6px; border-radius: 6px; border-left: 3px solid transparent;
   }
-  .linha:hover { background: var(--card-hover); }
-  .linha[aria-selected="true"] { background: var(--card-hover); border-color: var(--accent); }
+  .linha:nth-child(even) { background: var(--linha-alt); }
+  .linha.etiqueta { border-left-color: var(--aviso); }
   .linha .n { text-align: right; font: 13px/22px var(--mono); font-variant-numeric: tabular-nums; }
   .linha .nome { font: 13px/22px var(--mono); overflow-wrap: anywhere; }
   .linha .pill { justify-self: start; margin-left: 2px; }
   .linha .folhas { font-size: 13px; text-align: right; white-space: nowrap; }
-  .linha .visto { color: var(--sucesso); font-weight: 600; text-align: center; }
   .linha .paginas { grid-column: 2 / 5; font-size: 13px; color: var(--texto-sec); overflow-wrap: anywhere; }
-  .linha.feito .n, .linha.feito .nome, .linha.feito .folhas, .linha.feito .paginas { color: var(--texto-feito); }
+  .linha .link { grid-column: 2 / 5; justify-self: start; margin-left: -8px; }
+  .encomendas { grid-column: 2 / 5; margin: 0 0 6px; padding: 6px; background: var(--sub); border-radius: 6px; overflow-x: auto; }
+  .encomendas div {
+    display: flex; justify-content: space-between; gap: 16px; padding: 2px 8px; border-radius: 4px;
+    font: 13px/20px var(--mono); font-variant-numeric: tabular-nums;
+  }
+  .encomendas div:nth-child(even) { background: var(--linha-alt); }
+  .encomendas span:last-child { color: var(--texto-sec); text-align: right; }
 
-  #linha-estado { margin-top: 6px; font-weight: 600; }
   #linha-conferencia { font-size: 13px; color: var(--texto-sec); white-space: pre-wrap; }
-  #barra-folhas { margin-top: 12px; --cor: var(--sucesso); }
 
   /* Avisos e perguntas: só para avisos e erros, nunca para sucesso */
   dialog {
@@ -208,7 +198,10 @@
     .sidebar { padding: 24px 16px; overflow: visible; }
     main { padding: 20px 16px; }
     .lista { flex: none; max-height: 60vh; }
-    #p-papel { font-size: 26px; }
+    .stats { gap: 8px; }
+    .stat { padding: 10px 12px; }
+    .stat b { font-size: 22px; }
+    #btn-zip { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -236,46 +229,40 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.0</div>
+      <div class="versao">Versão web 1.1</div>
     </div>
   </aside>
 
   <main>
     <div class="cabecalho">
-      <h2>Imprimir</h2>
+      <h2>Blocos</h2>
       <div id="estado" role="status">Pronto</div>
     </div>
     <div class="barra" id="progresso" hidden><i></i></div>
 
     <div class="vazio" id="vazio" hidden></div>
 
-    <section id="vista" aria-label="Blocos a imprimir">
+    <section id="vista" aria-label="Blocos separados">
       <div class="aviso-exemplo" id="aviso-exemplo" hidden>
         <span class="pill exemplo">EXEMPLO</span>
         <span>Dados fictícios. Escolha o PDF de encomendas e carregue em Separar.</span>
       </div>
+
+      <div class="stats">
+        <div class="card stat"><b id="stat-blocos">0</b><span>Blocos</span></div>
+        <div class="card stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
+        <div class="card stat"><b id="stat-normal">0</b><span id="stat-normal-txt">Folhas A4-Normal</span></div>
+      </div>
+
       <div class="topo">
-        <span id="nome-trabalho"></span>
-        <button class="link" id="btn-zip" type="button">Descarregar ZIP</button>
+        <div class="info">
+          <div id="nome-trabalho"></div>
+          <div class="nota">Extraia o ZIP e imprima pela ordem dos nomes; o Continuacao-Index vai no fim.</div>
+        </div>
+        <button class="btn-principal azul" id="btn-zip" type="button">Descarregar ZIP</button>
       </div>
 
-      <div class="painel" id="painel" aria-live="polite">
-        <div id="p-bloco">—</div>
-        <div id="p-papel">—</div>
-        <div id="p-detalhe"></div>
-        <button class="btn" id="btn-novo" type="button" hidden>Novo PDF</button>
-      </div>
-
-      <div class="accoes">
-        <button class="btn-principal azul" id="btn-abrir" type="button">Abrir</button>
-        <button class="btn-principal" id="btn-impresso" type="button">Impresso ▶</button>
-        <button class="link discreto" id="btn-desmarcar" type="button">Desmarcar</button>
-      </div>
-
-      <div class="lista" id="lista" role="listbox" aria-label="Blocos"></div>
-
-      <div class="barra" id="barra-folhas"><i></i></div>
-      <div id="linha-estado"></div>
+      <div class="card lista" id="lista" role="list" aria-label="Blocos"></div>
       <div id="linha-conferencia"></div>
     </section>
   </main>
@@ -286,8 +273,7 @@
     <h3 id="dialogo-titulo">Proc-Separador</h3>
     <p id="dialogo-texto"></p>
     <div class="dialogo-botoes">
-      <button class="btn" id="dialogo-nao" value="nao">Não</button>
-      <button class="btn-principal" id="dialogo-sim" value="sim">Sim</button>
+      <button class="btn-principal" id="dialogo-ok" value="ok">OK</button>
     </div>
   </form>
 </dialog>
@@ -679,6 +665,11 @@ const Logica = (() => {
         paginas_txt: descricaoPaginas(numeros),
         paginas_frase: frasePaginas(numeros),
         encomendas: [...porEncomenda(info, indices).keys()],
+        // As mesmas linhas da conferência do guia: encomenda, folhas e páginas do original
+        detalhe: [...porEncomenda(info, indices)].map(([encomenda, paginas]) => ({
+          encomenda, folhas: paginas.length,
+          paginas_frase: frasePaginas(paginas.map(p => p + 1).sort((a, b) => a - b)),
+        })),
         orfas: saoOrfas,
         bytes,
       });
@@ -763,7 +754,11 @@ const Logica = (() => {
     log(`Verificado: os ${gerados.length} ficheiros somam as ${nPaginas} folhas do original.`);
 
     // Fim de linha do Windows, como o Python o escreve no posto
-    return { blocos: gerados, guia: { nome: NOME_GUIA, texto: resumo.join("\r\n") }, avisos, nPaginas };
+    return {
+      blocos: gerados, guia: { nome: NOME_GUIA, texto: resumo.join("\r\n") }, avisos, nPaginas,
+      // Conferência final do guia: folhas por papel
+      folhas: { etiqueta: nEtiqueta, normal: nNormal, continuacao: orfas.length },
+    };
   }
 
   // O ZIP com os blocos e o guia, tal como o Python os deixa na subpasta da hot folder
@@ -788,32 +783,24 @@ const Logica = (() => {
   if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdfjs/pdf.worker.min.js";
 
   const $ = id => document.getElementById(id);
+  const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const plural = (n, s, p) => `${n} ${n === 1 ? s : p}`;
   const { PAPEL, ROTULO_CONTINUACAO } = Logica;
 
   let pdf = null;         // {nome, dados: Uint8Array, folhas}
-  let trabalho = null;    // {nome, blocos, impressos: Set, folhasOriginal, folhasFicheiros, zip, exemplo}
-  let idx = 0;
-  let abertos = new Set(); // blocos abertos nesta separação
-  let concluido = false;
+  let trabalho = null;    // {nome, blocos, folhas, folhasOriginal, folhasFicheiros, zip, nomeZip, exemplo}
   let ocupado = false;
-  let urls = [];           // blob: URLs a libertar quando o trabalho sai de cena
 
-  // ---------------------------------------------------------------- pop-ups
-  function mensagem(texto, { tipo = "aviso", perguntar = false, sim = "Sim", nao = "Não" } = {}) {
+  // ---------------------------------------------------------------- pop-ups (só avisos e erros)
+  function mensagem(texto, tipo = "aviso") {
     const d = $("dialogo");
     $("dialogo-titulo").textContent = { aviso: "Atenção", erro: "Erro", info: "Proc-Separador" }[tipo];
     d.style.setProperty("--cor", tipo === "erro" ? "var(--erro)" : tipo === "info" ? "var(--accent)" : "var(--aviso)");
     $("dialogo-texto").textContent = texto;
-    $("dialogo-nao").hidden = !perguntar;
-    $("dialogo-nao").textContent = nao;
-    $("dialogo-sim").textContent = perguntar ? sim : "OK";
-    d.returnValue = "";
     d.showModal();
-    (perguntar ? $("dialogo-nao") : $("dialogo-sim")).focus();
-    return new Promise(ok => d.addEventListener("close", () => ok(d.returnValue === "sim"), { once: true }));
+    $("dialogo-ok").focus();
+    return new Promise(ok => d.addEventListener("close", ok, { once: true }));
   }
-  const perguntar = (texto, opcoes = {}) => mensagem(texto, { perguntar: true, ...opcoes });
 
   function estado(texto, tipo = "idle") {
     $("estado").textContent = texto;
@@ -821,13 +808,6 @@ const Logica = (() => {
   }
 
   // ---------------------------------------------------------------- PDF escolhido
-  function limparChipPdf() {
-    $("chip").classList.remove("escolhido");
-    $("nome-pdf").textContent = "Nenhum PDF escolhido";
-    $("folhas-pdf").hidden = true;
-    $("estado-pdf").hidden = true;
-  }
-
   function estadoPdf(texto, tipo = "idle") {
     if (!pdf) return;
     if (texto.length > 160) texto = texto.slice(0, 159) + "…";
@@ -850,8 +830,8 @@ const Logica = (() => {
     $("folhas-pdf").textContent = folhas === null ? "? folhas" : plural(folhas, "folha", "folhas");
     $("folhas-pdf").hidden = false;
     estadoPdf("Por separar");
-    if (trabalho && trabalho.exemplo) esquecerTrabalho();
-    atualizarVazio();
+    if (trabalho && trabalho.exemplo) trabalho = null;
+    atualizarVista();
   }
 
   $("btn-pdf").addEventListener("click", () => $("input-pdf").click());
@@ -893,31 +873,22 @@ const Logica = (() => {
     $("btn-separar").textContent = sim ? "A separar…" : "Separar";
     $("btn-pdf").disabled = sim;
     $("progresso").hidden = !sim;
-    atualizarVazio();
+    atualizarVista();
   }
 
   const progresso = x => { $("progresso").firstElementChild.style.width = `${x * 100}%`; };
 
-  async function confirmarRecomeco() {
-    if (!trabalho || trabalho.exemplo) return true;
-    const feitos = trabalho.impressos.size, total = trabalho.blocos.length;
-    if (!(feitos > 0 && feitos < total)) return true;
-    return perguntar(`A impressão de «${trabalho.nome}» vai em ${feitos} de ${plural(total, "bloco", "blocos")}.\n\n` +
-      "Separar outra vez recomeça do zero. Continuar?");
-  }
-
   $("btn-separar").addEventListener("click", async () => {
     if (ocupado) return;
-    if (!pdf) { await mensagem("Escolha primeiro o PDF.", { tipo: "info" }); return; }
+    if (!pdf) { await mensagem("Escolha primeiro o PDF.", "info"); return; }
     if (!window.pdfjsLib || !window.PDFLib || !window.JSZip) {
-      await mensagem("As bibliotecas de PDF não carregaram. Recarregue a página.", { tipo: "erro" });
+      await mensagem("As bibliotecas de PDF não carregaram. Recarregue a página.", "erro");
       return;
     }
-    if (!(await confirmarRecomeco())) return;
 
-    // O trabalho anterior sai já de cena: se esta separação falhar, a área Imprimir não pode
-    // ficar a mostrar blocos antigos.
-    esquecerTrabalho();
+    // O resultado anterior sai já de cena: se esta separação falhar, não fica à vista um ZIP
+    // que já não corresponde a este PDF.
+    trabalho = null;
     const atual = pdf;
     let erro = null, avisos = [];
     progresso(0);
@@ -941,7 +912,7 @@ const Logica = (() => {
       } else {
         const zip = new Blob([await Logica.criarZip(res)], { type: "application/zip" });
         trabalho = {
-          nome: atual.nome, blocos: res.blocos, impressos: new Set(), folhasOriginal, folhasFicheiros, zip,
+          nome: atual.nome, blocos: res.blocos, folhas: res.folhas, folhasOriginal, folhasFicheiros, zip,
           nomeZip: `${Logica.nomeSeguro(Logica.semExtensao(atual.nome))}.zip`,
         };
         avisos = res.avisos;
@@ -956,35 +927,24 @@ const Logica = (() => {
     }
 
     if (erro || !trabalho) {
-      esquecerTrabalho();
+      trabalho = null;
+      atualizarVista();
       estado("O PDF não foi separado", "erro");
-      await mensagem(`O PDF não foi separado.\n\n${erro || "Motivo desconhecido."}`, { tipo: "erro" });
+      await mensagem(`O PDF não foi separado.\n\n${erro || "Motivo desconhecido."}`, "erro");
       return;
     }
-    carregarTrabalho();
-    estado(`${plural(trabalho.blocos.length, "bloco", "blocos")} por imprimir`, "ok");
+    mostrarTrabalho();
+    estado(`${plural(trabalho.blocos.length, "bloco", "blocos")} prontos · descarregue o ZIP`, "ok");
     if (avisos.length) await mensagem(avisos.join("\n\n"));
   });
 
-  // ---------------------------------------------------------------- área Imprimir
-  function atualizarVazio() {
-    const mostrarVista = !!trabalho;
-    $("vista").hidden = !mostrarVista;
-    $("vazio").hidden = mostrarVista;
+  // ---------------------------------------------------------------- resultado
+  function atualizarVista() {
+    $("vista").hidden = !trabalho;
+    $("vazio").hidden = !!trabalho;
     $("vazio").textContent = ocupado ? "A separar o PDF…"
       : pdf ? "Carregue em Separar para dividir o PDF em blocos."
       : "Escolha o PDF e carregue em Separar.";
-  }
-
-  function esquecerTrabalho() {
-    trabalho = null;
-    abertos = new Set();
-    concluido = false;
-    idx = 0;
-    urls.forEach(u => URL.revokeObjectURL(u));
-    urls = [];
-    $("lista").replaceChildren();
-    atualizarVazio();
   }
 
   const descricaoGaveta = b => {
@@ -998,145 +958,54 @@ const Logica = (() => {
     return e;
   }
 
-  function carregarTrabalho() {
-    const ex = !!trabalho.exemplo;
-    $("aviso-exemplo").hidden = !ex;
-    $("nome-trabalho").textContent = trabalho.nome;
-    $("btn-zip").disabled = ex;
-    $("btn-abrir").disabled = ex;
-    $("btn-impresso").disabled = ex;
-    $("btn-desmarcar").disabled = ex;
-    $("lista").replaceChildren(...trabalho.blocos.map((b, i) => {
-      const linha = el("button", { className: "linha", type: "button" },
-        el("span", { className: "n", textContent: String(i + 1) }),
-        el("span", { className: "nome", textContent: b.nome }),
-        el("span", { className: "pill", textContent: descricaoGaveta(b) }),
-        el("span", { className: "folhas", textContent: plural(b.folhas, "folha", "folhas") }),
-        el("span", { className: "visto", ariaHidden: "true" }),
-        el("span", { className: "paginas", textContent: `${b.paginas_frase} do original` }));
-      linha.querySelector(".pill").dataset.papel = b.gaveta;
-      linha.setAttribute("role", "option");
-      linha.addEventListener("click", () => selecionar(i));
-      linha.addEventListener("dblclick", () => duploClique(i));
-      return linha;
-    }));
-    atualizarVazio();
-    irPara(0);
-  }
-
-  function irPara(i) {
-    if (!trabalho) return;
-    concluido = false;
-    idx = Math.max(0, Math.min(i, trabalho.blocos.length - 1));
-    atualizarVista();
-    $("lista").children[idx]?.scrollIntoView({ block: "nearest" });
-  }
-
-  function selecionar(i) {
-    if (i !== idx) {
-      idx = i;
-      concluido = false;
-      atualizarVista();
-    }
-  }
-
-  function duploClique(i) {
-    if (i !== idx || concluido) irPara(i);
-    abrirBloco();
-  }
-
-  function atualizarVista() {
-    if (!trabalho) return;
-    const { blocos, impressos } = trabalho;
-    [...$("lista").children].forEach((linha, i) => {
-      const feito = impressos.has(blocos[i].nome);
-      linha.setAttribute("aria-selected", String(i === idx));
-      linha.classList.toggle("feito", feito);
-      linha.querySelector(".visto").textContent = feito ? "✓" : "";
+  // Uma linha por bloco, com as encomendas que traz (as linhas de conferência do guia)
+  function linhaBloco(b, i) {
+    const encomendas = el("div", { className: "encomendas", hidden: true });
+    const botao = el("button", { className: "link", type: "button", textContent: `▸  Ver encomendas (${b.detalhe.length})` });
+    botao.setAttribute("aria-expanded", "false");
+    botao.addEventListener("click", () => {
+      if (!encomendas.childElementCount) {
+        for (const d of b.detalhe) {
+          encomendas.append(el("div", {},
+            el("span", { textContent: d.encomenda || "SEM NÚMERO" }),
+            el("span", { textContent: `${plural(d.folhas, "folha", "folhas")} · ${d.paginas_frase}` })));
+        }
+      }
+      encomendas.hidden = !encomendas.hidden;
+      botao.textContent = `${encomendas.hidden ? "▸  Ver" : "▾  Ocultar"} encomendas (${b.detalhe.length})`;
+      botao.setAttribute("aria-expanded", String(!encomendas.hidden));
     });
+    const pill = el("span", { className: "pill", textContent: descricaoGaveta(b) });
+    pill.dataset.papel = b.gaveta;
+    const linha = el("div", { className: `linha${b.gaveta === 3 ? " etiqueta" : ""}` },
+      el("span", { className: "n", textContent: String(i + 1) }),
+      el("span", { className: "nome", textContent: b.nome }),
+      pill,
+      el("span", { className: "folhas", textContent: plural(b.folhas, "folha", "folhas") }),
+      el("span", { className: "paginas", textContent: `${b.paginas_frase} do original` }),
+      botao, encomendas);
+    linha.setAttribute("role", "listitem");
+    return linha;
+  }
 
-    // Progresso em folhas impressas, e a conferência entre o original e a soma dos ficheiros
-    const total = blocos.reduce((s, b) => s + b.folhas, 0);
-    const feitas = blocos.reduce((s, b) => s + (impressos.has(b.nome) ? b.folhas : 0), 0);
-    const { folhasOriginal: original, folhasFicheiros: separadas } = trabalho;
-    $("barra-folhas").firstElementChild.style.width = `${(feitas / Math.max(total, 1)) * 100}%`;
-    $("linha-estado").textContent = `${impressos.size} de ${blocos.length} blocos · ${feitas} de ${total} folhas impressas`;
-    $("linha-conferencia").textContent = `"${trabalho.nome}" = ${original} folhas  |  ` +
+  function mostrarTrabalho() {
+    const t = trabalho;
+    $("aviso-exemplo").hidden = !t.exemplo;
+    $("btn-zip").disabled = !!t.exemplo;
+    $("stat-blocos").textContent = fmt(t.blocos.length);
+    $("stat-etiqueta").textContent = fmt(t.folhas.etiqueta);
+    $("stat-normal").textContent = fmt(t.folhas.normal);
+    $("stat-normal-txt").textContent = t.folhas.continuacao
+      ? `Folhas A4-Normal · ${t.folhas.continuacao} em ${ROTULO_CONTINUACAO}` : "Folhas A4-Normal";
+    $("nome-trabalho").textContent = t.nome;
+    $("lista").replaceChildren(...t.blocos.map(linhaBloco));
+    $("lista").scrollTop = 0;
+    const { folhasOriginal: original, folhasFicheiros: separadas } = t;
+    $("linha-conferencia").textContent = `"${t.nome}" = ${original} folhas  |  ` +
       `Contagem total blocos separados: ${separadas} folhas ${original === separadas ? "✓" : "✗"}`;
     $("linha-conferencia").dataset.tipo = original === separadas ? "idle" : "erro";
-
-    if (concluido) return;
-    $("btn-novo").hidden = true;
-    const b = blocos[idx];
-    $("painel").dataset.papel = b.gaveta;
-    $("p-bloco").textContent = `BLOCO ${idx + 1} DE ${blocos.length}`;
-    $("p-papel").textContent = descricaoGaveta(b);
-    const marca = impressos.has(b.nome) ? "   ·   ✓ IMPRESSO" : "";
-    $("p-detalhe").textContent = `${plural(b.folhas, "folha", "folhas")}   ·   ${b.paginas_frase} do original${marca}`;
-  }
-
-  function mostrarConcluido() {
-    concluido = true;
     atualizarVista();
-    $("painel").dataset.papel = "ok";
-    $("p-bloco").textContent = `TODOS OS ${trabalho.blocos.length} BLOCOS IMPRESSOS`;
-    $("p-papel").textContent = "CONCLUÍDO";
-    $("p-detalhe").textContent = "";
-    $("btn-novo").hidden = false;
-    estado("Impressão concluída", "ok");
   }
-
-  // Abre o bloco num separador novo, no leitor de PDF do browser, para imprimir
-  async function abrirBloco() {
-    if (!trabalho || trabalho.exemplo) return;
-    const b = trabalho.blocos[idx];
-    if (!b.url) {
-      b.url = URL.createObjectURL(new Blob([b.bytes], { type: "application/pdf" }));
-      urls.push(b.url);
-    }
-    if (window.open(b.url, "_blank")) abertos.add(idx);
-    else await mensagem("O browser bloqueou a abertura do PDF num separador novo. " +
-      "Permita as janelas pop-up para este site e carregue outra vez em Abrir.");
-  }
-
-  async function marcarEAvancar() {
-    if (!trabalho || trabalho.exemplo) return;
-    const { blocos, impressos } = trabalho;
-    const b = blocos[idx];
-    // Um bloco marcado sem ter sido impresso é uma série de folhas seguidas que falta na
-    // pilha, e ninguém dá por isso até à montagem.
-    if (!impressos.has(b.nome) && !abertos.has(idx)) {
-      const sim = await perguntar(`O bloco ${idx + 1} (${b.nome}, ${plural(b.folhas, "folha", "folhas")}) ` +
-        "ainda não foi aberto nesta sessão.\n\nTem a certeza de que já está impresso?");
-      if (!sim) return;
-    }
-    impressos.add(b.nome);
-
-    const seguinte = blocos.findIndex((x, i) => i > idx && !impressos.has(x.nome));
-    if (seguinte >= 0) { irPara(seguinte); return; }
-
-    // Chegou ao fim: nenhum bloco pode ter ficado para trás
-    const emFalta = blocos.flatMap((x, i) => (impressos.has(x.nome) ? [] : [i]));
-    if (emFalta.length) {
-      atualizarVista();
-      let linhas = emFalta.slice(0, 10).map(i => `  • ${blocos[i].nome}  —  ${plural(blocos[i].folhas, "folha", "folhas")} ` +
-        `(${blocos[i].paginas_frase} do original)`).join("\n");
-      if (emFalta.length > 10) linhas += `\n  … e mais ${emFalta.length - 10}`;
-      await mensagem(`ATENÇÃO: faltam imprimir ${plural(emFalta.length, "bloco", "blocos")}:\n\n${linhas}`);
-      irPara(emFalta[0]);
-      return;
-    }
-    mostrarConcluido();
-  }
-
-  $("btn-abrir").addEventListener("click", abrirBloco);
-  $("btn-impresso").addEventListener("click", marcarEAvancar);
-  $("btn-desmarcar").addEventListener("click", () => {
-    if (!trabalho || trabalho.exemplo) return;
-    trabalho.impressos.delete(trabalho.blocos[idx].nome);
-    concluido = false;
-    atualizarVista();
-  });
 
   $("btn-zip").addEventListener("click", () => {
     if (!trabalho || !trabalho.zip) return;
@@ -1148,37 +1017,26 @@ const Logica = (() => {
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   });
 
-  // Fim do ciclo: volta ao estado inicial
-  $("btn-novo").addEventListener("click", () => {
-    if (ocupado) return;
-    esquecerTrabalho();
-    pdf = null;
-    limparChipPdf();
-    atualizarVazio();
-    estado("Pronto");
-  });
-
-  // O "impresso" vive só nesta página: fechar a meio perde-o
   addEventListener("beforeunload", e => {
-    const aMeio = trabalho && !trabalho.exemplo && trabalho.impressos.size > 0 && !concluido;
-    if (ocupado || aMeio) { e.preventDefault(); e.returnValue = ""; }
+    if (ocupado) { e.preventDefault(); e.returnValue = ""; }
   });
 
   // Estado inicial: um exemplo com dados fictícios, até se escolher um PDF
-  const ex = (nome, gaveta, folhas, paginas, orfas = false) => ({ nome, gaveta, folhas, paginas_frase: paginas, orfas });
+  const ex = (nome, gaveta, folhas, paginas, detalhe, orfas = false) =>
+    ({ nome, gaveta, folhas, paginas_frase: paginas, orfas, detalhe: detalhe.map(([encomenda, f, p]) => ({ encomenda, folhas: f, paginas_frase: p })) });
   trabalho = {
-    exemplo: true, nome: "binder-exemplo.pdf", impressos: new Set(["01_A4-Normal.pdf"]),
-    folhasOriginal: 22, folhasFicheiros: 22,
+    exemplo: true, nome: "binder-exemplo.pdf", folhasOriginal: 22, folhasFicheiros: 22,
+    folhas: { etiqueta: 15, normal: 7, continuacao: 4 },
     blocos: [
-      ex("01_A4-Normal.pdf", 1, 1, "página 1"),
-      ex("02_A4-Etiqueta.pdf", 3, 4, "páginas 2-5"),
-      ex("03_A4-Normal.pdf", 1, 2, "páginas 6-7"),
-      ex("04_A4-Etiqueta.pdf", 3, 11, "páginas 8-12, 14-19"),
-      ex("Continuacao-Index_A4-Normal.pdf", 1, 4, "páginas 13, 20-22", true),
+      ex("01_A4-Normal.pdf", 1, 1, "página 1", [["1000101_500001", 1, "página 1"]]),
+      ex("02_A4-Etiqueta.pdf", 3, 4, "páginas 2-5", [["1000118_500031", 1, "página 2"], ["1000124_500040", 1, "página 3"],
+        ["1000131_500052", 1, "página 4"], ["1000140_500066", 1, "página 5"]]),
+      ex("03_A4-Normal.pdf", 1, 2, "páginas 6-7", [["1000152_500081", 2, "páginas 6-7"]]),
+      ex("04_A4-Etiqueta.pdf", 3, 11, "páginas 8-12, 14-19", [["1000160_500090", 5, "páginas 8-12"], ["1000171_500102", 6, "páginas 14-19"]]),
+      ex("Continuacao-Index_A4-Normal.pdf", 1, 4, "páginas 13, 20-22", [["1000160_500090", 1, "página 13"], ["1000171_500102", 3, "páginas 20-22"]], true),
     ],
   };
-  carregarTrabalho();
-  irPara(1);
+  mostrarTrabalho();
 })();
 </script>
 
