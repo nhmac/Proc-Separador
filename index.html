@@ -243,11 +243,6 @@
     <div class="vazio" id="vazio" hidden></div>
 
     <section id="vista" aria-label="Blocos separados">
-      <div class="aviso-exemplo" id="aviso-exemplo" hidden>
-        <span class="pill exemplo">EXEMPLO</span>
-        <span>Dados fictícios. Escolha o PDF de encomendas e carregue em Separar.</span>
-      </div>
-
       <div class="stats">
         <div class="card stat"><b id="stat-blocos">0</b><span>Blocos</span></div>
         <div class="card stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
@@ -830,7 +825,6 @@ const Logica = (() => {
     $("folhas-pdf").textContent = folhas === null ? "? folhas" : plural(folhas, "folha", "folhas");
     $("folhas-pdf").hidden = false;
     estadoPdf("Por separar");
-    if (trabalho && trabalho.exemplo) trabalho = null;
     atualizarVista();
   }
 
@@ -990,8 +984,6 @@ const Logica = (() => {
 
   function mostrarTrabalho() {
     const t = trabalho;
-    $("aviso-exemplo").hidden = !t.exemplo;
-    $("btn-zip").disabled = !!t.exemplo;
     $("stat-blocos").textContent = fmt(t.blocos.length);
     $("stat-etiqueta").textContent = fmt(t.folhas.etiqueta);
     $("stat-normal").textContent = fmt(t.folhas.normal);
@@ -1021,22 +1013,8 @@ const Logica = (() => {
     if (ocupado) { e.preventDefault(); e.returnValue = ""; }
   });
 
-  // Estado inicial: um exemplo com dados fictícios, até se escolher um PDF
-  const ex = (nome, gaveta, folhas, paginas, detalhe, orfas = false) =>
-    ({ nome, gaveta, folhas, paginas_frase: paginas, orfas, detalhe: detalhe.map(([encomenda, f, p]) => ({ encomenda, folhas: f, paginas_frase: p })) });
-  trabalho = {
-    exemplo: true, nome: "binder-exemplo.pdf", folhasOriginal: 22, folhasFicheiros: 22,
-    folhas: { etiqueta: 15, normal: 7, continuacao: 4 },
-    blocos: [
-      ex("01_A4-Normal.pdf", 1, 1, "página 1", [["1000101_500001", 1, "página 1"]]),
-      ex("02_A4-Etiqueta.pdf", 3, 4, "páginas 2-5", [["1000118_500031", 1, "página 2"], ["1000124_500040", 1, "página 3"],
-        ["1000131_500052", 1, "página 4"], ["1000140_500066", 1, "página 5"]]),
-      ex("03_A4-Normal.pdf", 1, 2, "páginas 6-7", [["1000152_500081", 2, "páginas 6-7"]]),
-      ex("04_A4-Etiqueta.pdf", 3, 11, "páginas 8-12, 14-19", [["1000160_500090", 5, "páginas 8-12"], ["1000171_500102", 6, "páginas 14-19"]]),
-      ex("Continuacao-Index_A4-Normal.pdf", 1, 4, "páginas 13, 20-22", [["1000160_500090", 1, "página 13"], ["1000171_500102", 3, "páginas 20-22"]], true),
-    ],
-  };
-  mostrarTrabalho();
+  // Estado inicial: sem dados até se escolher um PDF
+  atualizarVista();
 })();
 </script>
 
