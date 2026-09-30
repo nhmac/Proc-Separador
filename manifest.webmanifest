@@ -1,7 +1,7 @@
 {
   "name": "Proc-Separador",
   "short_name": "Proc-Separador",
-  "description": "Separa o PDF de encomendas em blocos por tipo de papel (A4-Etiqueta / A4-Normal), pela ordem do original.",
+  "description": "Prepara o PDF de encomendas para imprimir num só trabalho, com folhas de inserção por tipo de papel (A4-Etiqueta / A4-Normal), pela ordem do original.",
   "lang": "pt-PT",
   "start_url": "./",
   "scope": "./",
