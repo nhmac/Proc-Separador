@@ -146,8 +146,16 @@
   }
   .pill[data-papel="3"] { background: var(--etiqueta-fundo); color: var(--etiqueta-texto); }
 
-  /* Plano do trabalho único: o perfil, a gaveta das inseridas e as linhas do campo Inserir */
+  /* Plano de cada trabalho: o perfil, a gaveta das inseridas e as linhas do campo Inserir.
+     Um cartão por parte; com várias partes, cada um abre com o cabeçalho e o seu download */
+  .partes { display: flex; flex-direction: column; gap: 12px; }
   .plano { padding: 4px 16px; }
+  .parte-topo {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap;
+    padding: 12px 0;
+  }
+  .parte-topo b { font: 600 16px/1.3 var(--display); }
+  .parte-topo .btn-principal { width: auto; min-width: 200px; }
   .passo {
     display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 16px; align-items: baseline;
     padding: 12px 0; border-top: 1px solid var(--borda);
@@ -155,7 +163,7 @@
   .passo:first-child { border-top: 0; }
   .rotulo { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-sec); }
   .valor { display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; }
-  #perfil-base { font: 600 20px/1.3 var(--display); }
+  .perfil-base { font: 600 20px/1.3 var(--display); }
   .inserir { display: grid; gap: 10px; }
   .inserir .sub { font-size: 13px; color: var(--texto-sec); }
   .campo { display: flex; gap: 8px; align-items: stretch; margin-top: 2px; }
@@ -229,7 +237,7 @@
     .stats { gap: 8px; }
     .stat { padding: 10px 12px; }
     .stat b { font-size: 22px; }
-    #btn-zip, #btn-carimbado { width: 100%; }
+    #btn-zip, #btn-carimbado, .parte-topo .btn-principal { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -257,7 +265,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.2</div>
+      <div class="versao">Versão web 1.3</div>
     </div>
   </aside>
 
@@ -280,7 +288,7 @@
       <div class="topo">
         <div class="info">
           <div id="nome-trabalho"></div>
-          <div class="nota">Imprima o PDF carimbado inteiro, num só trabalho, seguindo o guia.</div>
+          <div class="nota" id="nota-trabalho">Imprima o PDF carimbado inteiro, num só trabalho, seguindo o guia.</div>
         </div>
         <div class="acoes">
           <button class="btn" id="btn-guia" type="button">Descarregar guia</button>
@@ -288,20 +296,7 @@
         </div>
       </div>
 
-      <div class="card plano">
-        <div class="passo">
-          <span class="rotulo">Impressora</span>
-          <div class="valor"><b id="perfil-base"></b><span class="pill" id="pill-base"></span></div>
-        </div>
-        <div class="passo">
-          <span class="rotulo">Folhas inseridas</span>
-          <div class="valor" id="inseridas"></div>
-        </div>
-        <div class="passo" id="passo-inserir">
-          <span class="rotulo">Inserir</span>
-          <div class="inserir" id="linhas-inserir"></div>
-        </div>
-      </div>
+      <div class="partes" id="partes"></div>
       <div id="linha-conferencia"></div>
 
       <details class="antigo" id="antigo">
@@ -348,7 +343,8 @@ const Logica = (() => {
   // perfil. O perfil base leva o papel maioritário; o outro entra como folhas de inserção.
   const PERFIL = { 3: "Canon 2 › Cor › Gaveta 3", 1: "Canon 2 › Cor › Gaveta 1" };
   const LIMITE_CARACTERES = 300;        // por entrada do campo Inserir do driver (testados 344)
-  const LIMITE_INSERCOES_TESTADO = 100; // folhas inseridas testadas no driver
+  const LIMITE_INSERCOES = 100;         // folhas de inserção por trabalho: o driver aceita 1-100 e
+                                        // com 1-101 bloqueia o botão Adicionar
   const PONTOS_VERIFICACAO = 3;         // primeiras e últimas mudanças de papel no guia
 
   // Carimbo do número de encomenda, em pontos (ver _sobreposicao_numero no Python)
@@ -634,16 +630,82 @@ const Logica = (() => {
   const folhasDaLinha = linha => linha.split(",")
     .reduce((s, t) => { const [a, b = a] = t.split("-").map(Number); return s + b - a + 1; }, 0);
 
-  // O PDF inteiro num só trabalho, pela ordem do original: o perfil base leva o papel com mais
-  // folhas (empate: A4-Etiqueta) e as do outro papel entram como folhas de inserção. As
-  // continuações ficam onde estão, a seguir à folha principal da sua encomenda.
+  // O driver recusa mais de LIMITE_INSERCOES folhas de inserção num trabalho. Acima disso o PDF
+  // imprime-se em vários trabalhos seguidos: troços do original, pela mesma ordem, cada um com
+  // o máximo de inserções que couber. Corta sempre no início de uma encomenda; só uma encomenda
+  // que sozinha passe o limite é cortada por dentro (e fica em `repartidas`).
+  // Devolve {cortes: [[inicio, fim), …], repartidas: [encomenda, …]}, com índices do original.
+  function partirTrabalho(info, gavetaInseridas, limite = LIMITE_INSERCOES) {
+    if (!(limite >= 1)) throw new Error("O limite de folhas de inserção tem de ser pelo menos 1.");
+    const eInserida = i => info[i].gaveta === gavetaInseridas;
+    // Troços seguidos da mesma encomenda (a herança dos números já está resolvida)
+    const grupos = [];
+    info.forEach((p, i) => {
+      if (i && info[i - 1].encomenda === p.encomenda) grupos[grupos.length - 1][1] = i + 1;
+      else grupos.push([i, i + 1]);
+    });
+
+    const cortes = [], repartidas = [];
+    let inicio = 0, naParte = 0; // onde começa a parte atual e as inserções que já tem
+    for (const [a, b] of grupos) {
+      let doGrupo = 0;
+      for (let i = a; i < b; i++) if (eInserida(i)) doGrupo++;
+      if (naParte + doGrupo <= limite) { naParte += doGrupo; continue; }
+      // Não cabe: a parte fecha antes desta encomenda
+      if (doGrupo <= limite) { cortes.push([inicio, a]); inicio = a; naParte = doGrupo; continue; }
+      // Uma encomenda sozinha acima do limite: vai enchendo as partes, e cada corte fica logo
+      // antes da folha inserida que o passaria
+      repartidas.push(info[a].encomenda);
+      for (let i = a; i < b; i++) {
+        if (!eInserida(i)) continue;
+        if (naParte === limite) { cortes.push([inicio, i]); inicio = i; naParte = 0; }
+        naParte++;
+      }
+    }
+    cortes.push([inicio, info.length]);
+
+    // Como na cobertura dos blocos: troços seguidos, todas as páginas uma vez, nenhum acima do limite
+    let esperado = 0;
+    for (const [a, b] of cortes) {
+      let n = 0;
+      for (let i = a; i < b; i++) if (eInserida(i)) n++;
+      if (a !== esperado || (b <= a && info.length) || n > limite) {
+        throw new Error("A divisão em partes não cobre todas as páginas do original exatamente uma vez, " +
+          `ou há uma parte com mais de ${limite} folhas de inserção; nada foi escrito.`);
+      }
+      esperado = b;
+    }
+    if (esperado !== info.length) {
+      throw new Error("A divisão em partes não cobre todas as páginas do original; nada foi escrito.");
+    }
+    return { cortes, repartidas };
+  }
+
+  // O PDF pela ordem do original: o perfil base leva o papel com mais folhas (empate:
+  // A4-Etiqueta) e as do outro papel entram como folhas de inserção. As continuações ficam onde
+  // estão, a seguir à folha principal da sua encomenda. É um só trabalho enquanto as inserções
+  // couberem no driver; acima disso, várias partes, todas com o mesmo perfil base. As páginas
+  // e as linhas de cada parte estão na numeração da parte (1…total), que é a do trabalho enviado.
   function planoImpressao(info) {
     const contagem = { 3: 0, 1: 0 };
     for (const p of info) contagem[p.gaveta]++;
     const base = contagem[3] >= contagem[1] ? 3 : 1;
     const gavetaInseridas = base === 3 ? 1 : 3;
+    // Na numeração do original: só para contagens, nunca para o campo Inserir
     const paginasInseridas = info.flatMap((p, i) => (p.gaveta === gavetaInseridas ? [i + 1] : []));
-    const linhas = paginasInseridas.length ? dividirLinhas(intervalos(paginasInseridas)) : [];
+
+    const { cortes, repartidas } = partirTrabalho(info, gavetaInseridas);
+    const partes = cortes.map(([inicio, fim], k) => {
+      const troco = info.slice(inicio, fim);
+      const doTroco = { 3: 0, 1: 0 };
+      for (const p of troco) doTroco[p.gaveta]++;
+      const inseridas = troco.flatMap((p, i) => (p.gaveta === gavetaInseridas ? [i + 1] : []));
+      const linhas = inseridas.length ? dividirLinhas(intervalos(inseridas)) : [];
+      return {
+        n: k + 1, de: inicio + 1, ate: fim, total: fim - inicio, contagem: doTroco,
+        paginasInseridas: inseridas, linhas, folhasPorLinha: linhas.map(folhasDaLinha),
+      };
+    });
 
     // Cada continuação, com a folha principal (a última anterior que não é continuação)
     const continuacoes = [];
@@ -651,9 +713,11 @@ const Logica = (() => {
       if (!eOrfa(p)) return;
       let j = i - 1;
       while (j >= 0 && eOrfa(info[j])) j--;
+      const parte = partes.find(x => i + 1 >= x.de && i + 1 <= x.ate);
       continuacoes.push({
         pagina: i + 1, encomenda: p.encomenda, principal: j >= 0 ? j + 1 : null,
         noSitio: j >= 0 && !!p.encomenda && info[j].encomenda === p.encomenda,
+        parte: parte.n, paginaNaParte: i + 2 - parte.de,
       });
     });
 
@@ -665,86 +729,123 @@ const Logica = (() => {
       avisos.push("ATENÇÃO: continuações que não vêm logo a seguir a uma folha da mesma encomenda " +
         `(${frasePaginas(foraDoSitio)}). Confira-as à mão na pilha impressa.`);
     }
-    if (paginasInseridas.length > LIMITE_INSERCOES_TESTADO) {
-      avisos.push(`Há ${paginasInseridas.length} folhas de inserção: acima de ${LIMITE_INSERCOES_TESTADO} ` +
-        "inserções não foi testado no driver. Confira a pilha impressa.");
+    if (repartidas.length) {
+      const nomes = repartidas.map(n => n || "SEM NÚMERO").join(", ");
+      avisos.push(`ATENÇÃO: ${repartidas.length === 1 ? "a encomenda" : "as encomendas"} ${nomes} ` +
+        `${repartidas.length === 1 ? "tem" : "têm"} mais de ${LIMITE_INSERCOES} folhas de inserção e ` +
+        `${repartidas.length === 1 ? "ficou repartida" : "ficaram repartidas"} entre partes. ` +
+        "Ao juntar as pilhas, confira que as folhas dessa encomenda ficam seguidas.");
     }
 
     return {
       total: info.length, contagem,
       base, perfilBase: PERFIL[base], gavetaInseridas,
-      paginasInseridas, linhas, folhasPorLinha: linhas.map(folhasDaLinha),
-      semInsercoes: !paginasInseridas.length,
-      continuacoes, avisos,
+      paginasInseridas, semInsercoes: !paginasInseridas.length,
+      partes, continuacoes, avisos,
     };
   }
 
-  // O guia do trabalho único (00_guia_impressao.txt), com fim de linha CRLF
-  function guiaImpressaoUnica(nomePdf, nomeCarimbado, plano, info) {
-    const { total, contagem, base, gavetaInseridas, linhas, continuacoes } = plano;
-    const w = String(total).length;
-    const pad = n => String(n).padStart(w);
+  // O guia do trabalho único (00_guia_impressao.txt), com fim de linha CRLF. `nomes` são os PDFs
+  // carimbados, um por parte. Com uma só parte o texto é o de sempre; com várias, cada parte
+  // tem os seus passos, na numeração da parte e com a página do original ao lado.
+  function guiaImpressaoUnica(nomePdf, nomes, plano, info) {
+    const { total, contagem, base, gavetaInseridas, partes, continuacoes } = plano;
+    const varias = partes.length > 1;
     const folhas = (n, s, p) => `${n} ${n === 1 ? s : p}`;
-    const nInseridas = plano.paginasInseridas.length;
+    const nomePapel = gaveta => (gaveta === 3 ? "etiqueta" : "normal");
 
     const g = [`Guia de impressão — ${nomePdf}`,
-      `Ficheiro a imprimir: ${nomeCarimbado} (${folhas(total, "página", "páginas")}, mesma ordem do original)`,
+      varias ? `Ficheiros a imprimir: ${partes.length}, pela ordem das partes`
+        : `Ficheiro a imprimir: ${nomes[0]} (${folhas(total, "página", "páginas")}, mesma ordem do original)`,
       `Conferência: ${folhas(total, "folha", "folhas")} = ${contagem[3]} ${PAPEL[3]} + ${contagem[1]} ${PAPEL[1]}`];
     if (continuacoes.length) {
       g.push(" ".repeat("Conferência: ".length) + (continuacoes.length === 1
         ? "(da qual 1 continuação, carimbada com o nº de encomenda)"
         : `(das quais ${continuacoes.length} continuações, carimbadas com o nº de encomenda)`));
     }
-    g.push("", plano.semInsercoes ? "IMPRESSÃO — um só trabalho, sem folhas de inserção" : "IMPRESSÃO — um só trabalho", "",
-      `1. Abrir ${nomeCarimbado} no Acrobat → Imprimir → Páginas: Tudo`, "",
-      `2. Impressora: ${PERFIL[base]}`, "");
-    if (plano.semInsercoes) {
-      g.push(`3. Todas as folhas são ${PAPEL[base]}: não há folhas de inserção.`,
-        "   Em Propriedades, confirmar que a Seleção do papel não ficou em Folhas de inserção.", "",
-        "4. Imprimir");
-    } else {
-      g.push("3. Propriedades → Fonte de papel → Seleção do papel: Folhas de inserção",
-        "   → Configurações de folhas de inserção", "",
-        `4. Folhas inseridas | Fonte de papel: Gaveta ${gavetaInseridas} | Imprimir em: Somente na frente`, "");
-      if (linhas.length === 1) {
-        g.push(`5. Inserir (copiar a linha abaixo) → Adicionar → confirmar ${nInseridas} linhas na lista`,
-          `   ${linhas[0]}`);
-      } else {
-        g.push(`5. Inserir: ${linhas.length} linhas, uma de cada vez (copiar → Inserir → Adicionar)`);
-        linhas.forEach((l, k) => g.push(
-          `   Linha ${k + 1} de ${linhas.length} (${folhas(plano.folhasPorLinha[k], "folha", "folhas")}) → Adicionar`, `   ${l}`));
-        g.push(`   No fim, confirmar ${nInseridas} linhas na lista`);
+    if (varias) {
+      for (const p of partes) {
+        g.push(`Parte ${p.n}: ${folhas(p.total, "folha", "folhas")} ` +
+          `(${p.de === p.ate ? `página ${p.de}` : `páginas ${p.de}-${p.ate}`} do original) · ` +
+          folhas(p.paginasInseridas.length, "folha de inserção", "folhas de inserção"));
       }
-      g.push("", "6. OK → OK → Imprimir");
+      g.push("", `O driver só aceita ${LIMITE_INSERCOES} folhas de inserção por trabalho: o PDF foi partido em ${partes.length} partes.`,
+        "Imprimir as partes pela ordem, cada uma inteira. Os números do campo Inserir são os de",
+        "cada parte, não os do original.");
     }
 
-    g.push("", "CONTINUAÇÕES — saem logo a seguir à folha principal");
-    if (!continuacoes.length) g.push("   (nenhuma)");
-    for (const c of continuacoes) {
-      const carimbo = c.encomenda ? `(carimbo ${c.encomenda})` : "(sem carimbo: SEM NÚMERO)";
-      const onde = c.pagina > 1 ? `a seguir à folha ${pad(c.pagina - 1)}` : "no início da pilha";
-      g.push(`   Folha ${pad(c.pagina)}  ${carimbo}  ${onde}` +
-        (c.noSitio ? "" : "  ← CONFERIR"));
-    }
+    for (const parte of partes) {
+      const nome = nomes[parte.n - 1];
+      const troco = info.slice(parte.de - 1, parte.ate);
+      const { linhas } = parte;
+      const nInseridas = parte.paginasInseridas.length;
+      const pad = n => String(n).padStart(String(parte.total).length);
+      // Com várias partes, a página do original ao lado do número da folha na parte
+      const noOriginal = n => (varias ? `  (página ${n + parte.de - 1} do original)` : "");
 
-    // Mudanças de papel: as primeiras e as últimas; e cada continuação
-    const nomePapel = gaveta => (gaveta === 3 ? "etiqueta" : "normal");
-    const mudancas = [];
-    for (let i = 1; i < info.length; i++) if (info[i].gaveta !== info[i - 1].gaveta) mudancas.push(i);
-    const k = PONTOS_VERIFICACAO;
-    const escolhidas = mudancas.length <= 2 * k ? mudancas : [...mudancas.slice(0, k), ...mudancas.slice(-k)];
-    const pontos = [
-      ...escolhidas.map(i => ({ chave: i, ordem: 1,
-        texto: `Folha ${pad(i)} ${nomePapel(info[i - 1].gaveta)} → ${i + 1} ${nomePapel(info[i].gaveta)}` })),
-      ...continuacoes.map(c => ({ chave: c.pagina, ordem: 0,
-        texto: `Folha ${pad(c.pagina)} continuação ${c.encomenda ? `(carimbo ${c.encomenda})` : "(SEM NÚMERO)"}` })),
-    ].sort((a, b) => a.chave - b.chave || a.ordem - b.ordem);
-    g.push("", "PONTOS DE VERIFICAÇÃO NA PILHA");
-    if (escolhidas.length < mudancas.length) {
-      g.push(`   (as ${k} primeiras e as ${k} últimas de ${mudancas.length} mudanças de papel, e cada continuação)`);
+      g.push("", varias ? `PARTE ${parte.n} de ${partes.length} — ${nome} (${folhas(parte.total, "folha", "folhas")})`
+        : nInseridas ? "IMPRESSÃO — um só trabalho" : "IMPRESSÃO — um só trabalho, sem folhas de inserção", "",
+        `1. Abrir ${nome} no Acrobat → Imprimir → Páginas: Tudo`, "",
+        `2. Impressora: ${PERFIL[base]}`, "");
+      if (!nInseridas) {
+        g.push(`3. Todas as folhas são ${PAPEL[base]}: não há folhas de inserção.`,
+          "   Em Propriedades, confirmar que a Seleção do papel não ficou em Folhas de inserção.", "",
+          "4. Imprimir");
+      } else {
+        g.push("3. Propriedades → Fonte de papel → Seleção do papel: Folhas de inserção",
+          "   → Configurações de folhas de inserção", "",
+          `4. Folhas inseridas | Fonte de papel: Gaveta ${gavetaInseridas} | Imprimir em: Somente na frente`, "");
+        if (linhas.length === 1) {
+          g.push(`5. Inserir (copiar a linha abaixo) → Adicionar → confirmar ${nInseridas} linhas na lista`,
+            `   ${linhas[0]}`);
+        } else {
+          g.push(`5. Inserir: ${linhas.length} linhas, uma de cada vez (copiar → Inserir → Adicionar)`);
+          linhas.forEach((l, k) => g.push(
+            `   Linha ${k + 1} de ${linhas.length} (${folhas(parte.folhasPorLinha[k], "folha", "folhas")}) → Adicionar`, `   ${l}`));
+          g.push(`   No fim, confirmar ${nInseridas} linhas na lista`);
+        }
+        g.push("", "6. OK → OK → Imprimir");
+      }
+
+      const daParte = continuacoes.filter(c => c.parte === parte.n);
+      g.push("", "CONTINUAÇÕES — saem logo a seguir à folha principal");
+      if (!daParte.length) g.push("   (nenhuma)");
+      for (const c of daParte) {
+        const f = c.paginaNaParte;
+        const carimbo = c.encomenda ? `(carimbo ${c.encomenda})` : "(sem carimbo: SEM NÚMERO)";
+        const onde = f > 1 ? `a seguir à folha ${pad(f - 1)}`
+          : parte.n > 1 ? `no início desta pilha, a seguir à última folha da parte ${parte.n - 1}` : "no início da pilha";
+        g.push(`   Folha ${pad(f)}  ${carimbo}  ${onde}` + noOriginal(f) +
+          (c.noSitio ? "" : "  ← CONFERIR"));
+      }
+
+      // Mudanças de papel: as primeiras e as últimas; e cada continuação
+      const mudancas = [];
+      for (let i = 1; i < troco.length; i++) if (troco[i].gaveta !== troco[i - 1].gaveta) mudancas.push(i);
+      const k = PONTOS_VERIFICACAO;
+      const escolhidas = mudancas.length <= 2 * k ? mudancas : [...mudancas.slice(0, k), ...mudancas.slice(-k)];
+      const pontos = [
+        ...escolhidas.map(i => ({ chave: i, ordem: 1,
+          texto: `Folha ${pad(i)} ${nomePapel(troco[i - 1].gaveta)} → ${i + 1} ${nomePapel(troco[i].gaveta)}` + noOriginal(i) })),
+        ...daParte.map(c => ({ chave: c.paginaNaParte, ordem: 0,
+          texto: `Folha ${pad(c.paginaNaParte)} continuação ${c.encomenda ? `(carimbo ${c.encomenda})` : "(SEM NÚMERO)"}` +
+            noOriginal(c.paginaNaParte) })),
+      ].sort((a, b) => a.chave - b.chave || a.ordem - b.ordem);
+      g.push("", "PONTOS DE VERIFICAÇÃO NA PILHA");
+      if (escolhidas.length < mudancas.length) {
+        g.push(`   (as ${k} primeiras e as ${k} últimas de ${mudancas.length} mudanças de papel, e cada continuação)`);
+      }
+      if (!pontos.length) g.push("   (sem mudanças de papel)");
+      for (const p of pontos) g.push(`   ${p.texto}`);
+
+      // Onde as pilhas se juntam: a última folha desta parte e a encomenda que abre a seguinte
+      if (parte.n < partes.length) {
+        const ultima = troco[troco.length - 1], primeira = info[parte.ate];
+        g.push("", `JUNÇÃO COM A PARTE ${parte.n + 1}`,
+          `   Esta pilha acaba na folha ${parte.total} (${nomePapel(ultima.gaveta)}, encomenda ${ultima.encomenda || "SEM NÚMERO"}).`,
+          `   A pilha da parte ${parte.n + 1} vem logo a seguir e começa na encomenda ${primeira.encomenda || "SEM NÚMERO"}.`);
+      }
     }
-    if (!pontos.length) g.push("   (sem mudanças de papel)");
-    for (const p of pontos) g.push(`   ${p.texto}`);
 
     if (plano.avisos.length) g.push("", ...plano.avisos);
     return g.join("\r\n");
@@ -788,24 +889,39 @@ const Logica = (() => {
     pagina.drawText(texto, { x: umDecimal(x), y: umDecimal(baseY), size: CARIMBO_TAMANHO, font: fonte, color: PDFLib.rgb(0, 0, 0) });
   }
 
-  // Cópia do original com as mesmas páginas pela mesma ordem; só as continuações levam o
-  // carimbo do número de encomenda. Relida no fim: se as folhas não baterem, não sai nada.
-  async function pdfCarimbado(origem, info, nomePdf) {
-    const doc = await PDFLib.PDFDocument.create({ updateMetadata: false });
-    for (const p of await doc.copyPages(origem, [...info.keys()])) doc.addPage(p);
-    const aCarimbar = info.flatMap((p, i) => (eOrfa(p) && p.encomenda ? [i] : []));
-    if (aCarimbar.length) {
-      const fonte = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-      const paginas = doc.getPages();
-      for (const i of aCarimbar) carimbar(paginas[i], info[i].encomenda, fonte);
+  // Um PDF por parte do plano: cópia do troço do original, com as mesmas páginas pela mesma
+  // ordem; só as continuações levam o carimbo do número de encomenda. Cada um é relido no fim:
+  // se as folhas de uma parte, ou a soma de todas, não baterem, não sai nada.
+  async function pdfsCarimbados(origem, info, nomePdf, partes) {
+    const raiz = `${nomeSeguro(semExtensao(nomePdf))}_carimbado`;
+    // Com 10 partes ou mais, "10de12" ficaria antes de "2de12" na ordem dos nomes
+    const largura = String(partes.length).length;
+    const lista = [];
+    for (const parte of partes) {
+      const indices = Array.from({ length: parte.total }, (_, j) => parte.de - 1 + j);
+      const doc = await PDFLib.PDFDocument.create({ updateMetadata: false });
+      for (const p of await doc.copyPages(origem, indices)) doc.addPage(p);
+      const aCarimbar = indices.flatMap((i, j) => (eOrfa(info[i]) && info[i].encomenda ? [j] : []));
+      if (aCarimbar.length) {
+        const fonte = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+        const paginas = doc.getPages();
+        for (const j of aCarimbar) carimbar(paginas[j], info[indices[j]].encomenda, fonte);
+      }
+      const bytes = await doc.save();
+      const nome = partes.length === 1 ? `${raiz}.pdf` : `${raiz}_${zeros(parte.n, largura)}de${partes.length}.pdf`;
+      const n = (await PDFLib.PDFDocument.load(bytes, { updateMetadata: false })).getPageCount();
+      if (n !== parte.total) {
+        throw new Error(`${nome} ficou com ${n} folhas em vez de ${parte.total}. ` +
+          "Nada foi entregue: separe o PDF outra vez.");
+      }
+      lista.push({ nome, bytes, carimbadas: aCarimbar.length, folhas: n });
     }
-    const bytes = await doc.save();
-    const n = (await PDFLib.PDFDocument.load(bytes, { updateMetadata: false })).getPageCount();
-    if (n !== origem.getPageCount() || n !== info.length) {
-      throw new Error(`O PDF carimbado ficou com ${n} folhas, mas o original tem ${origem.getPageCount()}. ` +
-        "Nada foi entregue: separe o PDF outra vez.");
+    const soma = lista.reduce((s, c) => s + c.folhas, 0);
+    if (soma !== origem.getPageCount() || soma !== info.length) {
+      throw new Error(`${partes.length === 1 ? "O PDF carimbado ficou" : "Os PDFs carimbados ficaram"} com ${soma} folhas, ` +
+        `mas o original tem ${origem.getPageCount()}. Nada foi entregue: separe o PDF outra vez.`);
     }
-    return { nome: `${nomeSeguro(semExtensao(nomePdf))}_carimbado.pdf`, bytes, carimbadas: aCarimbar.length };
+    return lista;
   }
 
   async function contarFolhas(dados) {
@@ -823,7 +939,8 @@ const Logica = (() => {
   // gerar_blocos do Python. dados: Uint8Array do PDF; nomePdf: nome do ficheiro.
   // Devolve {blocos: [{nome, gaveta, pag_ini, pag_fim, folhas, paginas_txt, paginas_frase,
   // encomendas, orfas, bytes}], guia: {nome, texto}, avisos, nPaginas} para o modo antigo (ZIP)
-  // e, para a impressão num só trabalho, {info, plano, carimbado: {nome, bytes}, guiaUnico: {nome, texto}}.
+  // e, para a impressão pelo PDF carimbado, {info, plano, carimbados: [{nome, bytes, carimbadas,
+  // folhas}] (um por parte do plano), guiaUnico: {nome, texto}}.
   async function separar(dados, nomePdf, { progresso = () => {}, log = () => {} } = {}) {
     let origem, pdf;
     try {
@@ -843,11 +960,11 @@ const Logica = (() => {
       verificarFormato(info, paginasLib.map(p => p.getRotation().angle));
       const antigo = await escrever(origem, info, nomePdf, { progresso: x => progresso(0.7 + 0.2 * x), log });
       const plano = planoImpressao(info);
-      const carimbado = await pdfCarimbado(origem, info, nomePdf);
+      const carimbados = await pdfsCarimbados(origem, info, nomePdf, plano.partes);
       progresso(1);
       return {
-        ...antigo, info, plano, carimbado,
-        guiaUnico: { nome: NOME_GUIA, texto: guiaImpressaoUnica(nomePdf, carimbado.nome, plano, info) },
+        ...antigo, info, plano, carimbados,
+        guiaUnico: { nome: NOME_GUIA, texto: guiaImpressaoUnica(nomePdf, carimbados.map(c => c.nome), plano, info) },
         avisos: [...new Set([...plano.avisos, ...antigo.avisos])],
       };
     } finally {
@@ -1003,8 +1120,8 @@ const Logica = (() => {
     // expostas para os testes
     palavras, imagens, numeroNoCabecalho, detectaEtiqueta, analisarPaginas, caixaDe, abrirParaLeitura, descricaoPaginas,
     agruparBlocos, agruparOrfasPorEncomenda, ordemDasEncomendas, separarOrfas, verificarFormato, escrever,
-    intervalos, dividirLinhas, planoImpressao, pdfCarimbado, guiaImpressaoUnica,
-    LIMITE_CARACTERES, LIMITE_INSERCOES_TESTADO,
+    intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsCarimbados, guiaImpressaoUnica,
+    LIMITE_CARACTERES, LIMITE_INSERCOES,
   };
 })();
 </script>
@@ -1019,7 +1136,7 @@ const Logica = (() => {
   const { PAPEL, ROTULO_CONTINUACAO } = Logica;
 
   let pdf = null;         // {nome, dados: Uint8Array, folhas}
-  // {nome, plano, carimbado: {nome, blob}, guia: {nome, blob}, folhasCarimbado,
+  // {nome, plano, carimbados: [{nome, blob}] (um por parte), guia: {nome, blob}, folhasPartes,
   //  blocos, folhas, folhasOriginal, folhasFicheiros, zip, nomeZip}
   let trabalho = null;
   let ocupado = false;
@@ -1135,13 +1252,21 @@ const Logica = (() => {
       for (const b of res.blocos) porFicheiro.push(await Logica.contarFolhas(b.bytes));
       const folhasFicheiros = porFicheiro.includes(null) ? null : porFicheiro.reduce((s, n) => s + n, 0);
       const folhasOriginal = await Logica.contarFolhas(atual.dados);
-      const folhasCarimbado = await Logica.contarFolhas(res.carimbado.bytes);
+      // Cada parte tem de ter as folhas do plano, e todas juntas as do original
+      const folhasPartes = [];
+      for (const c of res.carimbados) folhasPartes.push(await Logica.contarFolhas(c.bytes));
+      const folhasCarimbado = folhasPartes.includes(null) ? null : folhasPartes.reduce((s, n) => s + n, 0);
+      const parteErrada = res.plano.partes.find((p, k) => folhasPartes[k] !== p.total);
       const txt = n => (n === null ? "?" : String(n));
       const contagem = `${txt(folhasCarimbado)}/${txt(folhasOriginal)} folhas`;
-      if (folhasOriginal === null || folhasCarimbado !== folhasOriginal) {
+      if (folhasOriginal === null || folhasCarimbado !== folhasOriginal || parteErrada) {
         estadoPdf(`✗ ${contagem} — não imprimir`, "erro");
-        erro = `O PDF carimbado tem ${txt(folhasCarimbado)} folhas, mas o original tem ` +
-          `${txt(folhasOriginal)}. Este PDF não passa para a impressão.`;
+        erro = res.plano.partes.length === 1
+          ? `O PDF carimbado tem ${txt(folhasCarimbado)} folhas, mas o original tem ` +
+            `${txt(folhasOriginal)}. Este PDF não passa para a impressão.`
+          : `Os PDFs carimbados têm ${folhasPartes.map(txt).join(" + ")} folhas` +
+            (parteErrada ? ` (a parte ${parteErrada.n} devia ter ${parteErrada.total})` : "") +
+            `, e o original tem ${txt(folhasOriginal)}. Este PDF não passa para a impressão.`;
       } else if (folhasFicheiros !== folhasOriginal) {
         estadoPdf(`✗ ${txt(folhasFicheiros)}/${txt(folhasOriginal)} folhas nos blocos — não imprimir`, "erro");
         erro = `Os ficheiros separados somam ${txt(folhasFicheiros)} folhas, mas o original tem ` +
@@ -1149,8 +1274,8 @@ const Logica = (() => {
       } else {
         const zip = new Blob([await Logica.criarZip(res)], { type: "application/zip" });
         trabalho = {
-          nome: atual.nome, plano: res.plano, folhasCarimbado,
-          carimbado: { nome: res.carimbado.nome, blob: new Blob([res.carimbado.bytes], { type: "application/pdf" }) },
+          nome: atual.nome, plano: res.plano, folhasPartes,
+          carimbados: res.carimbados.map(c => ({ nome: c.nome, blob: new Blob([c.bytes], { type: "application/pdf" }) })),
           guia: { nome: res.guiaUnico.nome, blob: new Blob([res.guiaUnico.texto], { type: "text/plain;charset=utf-8" }) },
           blocos: res.blocos, folhas: res.folhas, folhasOriginal, folhasFicheiros, zip,
           nomeZip: `${Logica.nomeSeguro(Logica.semExtensao(atual.nome))}.zip`,
@@ -1174,7 +1299,9 @@ const Logica = (() => {
       return;
     }
     mostrarTrabalho();
-    estado("Pronto a imprimir · descarregue o PDF carimbado e o guia", "ok");
+    const nPartes = trabalho.plano.partes.length;
+    estado(nPartes > 1 ? `Pronto a imprimir · descarregue as ${nPartes} partes e o guia`
+      : "Pronto a imprimir · descarregue o PDF carimbado e o guia", "ok");
     if (avisos.length) await mensagem(avisos.join("\n\n"));
   });
 
@@ -1250,8 +1377,8 @@ const Logica = (() => {
     }, 1500);
   }
 
-  function linhaInserir(linha, k, plano) {
-    const n = plano.linhas.length;
+  function linhaInserir(linha, k, parte) {
+    const n = parte.linhas.length;
     // Cada intervalo fica inteiro no ecrã: a linha só quebra nas vírgulas
     const codigo = el("code");
     linha.split(",").forEach((t, i) => {
@@ -1260,15 +1387,56 @@ const Logica = (() => {
     });
     const botao = el("button", { className: "btn", type: "button", textContent: "Copiar" });
     botao.addEventListener("click", () => copiar(botao, codigo, linha));
-    const folhas = plural(plano.folhasPorLinha[k], "folha", "folhas");
+    const folhas = plural(parte.folhasPorLinha[k], "folha", "folhas");
     return el("div", {},
       el("div", { className: "sub", textContent: n > 1 ? `Linha ${k + 1} de ${n} · ${folhas} · um Adicionar por linha` : folhas }),
       el("div", { className: "campo" }, codigo, botao));
   }
 
+  const pillPapel = gaveta => {
+    const pill = el("span", { className: "pill", textContent: PAPEL[gaveta].toUpperCase() });
+    pill.dataset.papel = gaveta;
+    return pill;
+  };
+  const passo = (rotulo, valor) => el("div", { className: "passo" },
+    el("span", { className: "rotulo", textContent: rotulo }), valor);
+
+  // O cartão de um trabalho de impressão: a impressora, a gaveta das inseridas e as linhas do
+  // Inserir, na numeração dessa parte. Com várias partes, abre com o cabeçalho e o download.
+  function cartaoParte(parte, k) {
+    const { plano, carimbados } = trabalho;
+    const cartao = el("div", { className: "card plano" });
+    if (plano.partes.length > 1) {
+      const ficheiro = carimbados[k];
+      const botao = el("button", { className: "btn-principal azul", type: "button", textContent: `Descarregar parte ${parte.n}` });
+      botao.addEventListener("click", () => descarregar(ficheiro.blob, ficheiro.nome));
+      const paginas = parte.de === parte.ate ? `página ${parte.de}` : `páginas ${parte.de}–${parte.ate}`;
+      cartao.append(el("div", { className: "parte-topo" },
+        el("div", {},
+          el("b", { textContent: `Parte ${parte.n} de ${plano.partes.length}` }),
+          el("span", { className: "nota", textContent: ` · ${plural(parte.total, "folha", "folhas")} · ${paginas} do original` })),
+        botao));
+    }
+    cartao.append(passo("Impressora", el("div", { className: "valor" },
+      el("b", { className: "perfil-base", textContent: plano.perfilBase }), pillPapel(plano.base))));
+    const nInseridas = parte.paginasInseridas.length;
+    if (!nInseridas) {
+      cartao.append(passo("Folhas inseridas", el("div", { className: "valor" },
+        `Nenhuma: todas as folhas são ${PAPEL[plano.base]}. Imprimir só com o perfil acima, sem Folhas de inserção.`)));
+      return cartao;
+    }
+    cartao.append(
+      passo("Folhas inseridas", el("div", { className: "valor" },
+        el("span", { textContent: `Fonte de papel: Gaveta ${plano.gavetaInseridas}` }), pillPapel(plano.gavetaInseridas),
+        el("span", { textContent: `Imprimir em: Somente na frente · ${plural(nInseridas, "folha", "folhas")}` }))),
+      passo("Inserir", el("div", { className: "inserir" }, ...parte.linhas.map((l, i) => linhaInserir(l, i, parte)))));
+    return cartao;
+  }
+
   function mostrarTrabalho() {
     const t = trabalho;
     const plano = t.plano;
+    const nPartes = plano.partes.length;
 
     // Conferência: total, etiquetas, normais e continuações
     $("stat-total").textContent = fmt(plano.total);
@@ -1279,25 +1447,19 @@ const Logica = (() => {
       ? `Folhas A4-Normal · ${plural(nCont, "continuação", "continuações")}` : "Folhas A4-Normal";
     $("nome-trabalho").textContent = t.nome;
 
-    $("perfil-base").textContent = plano.perfilBase;
-    $("pill-base").textContent = PAPEL[plano.base].toUpperCase();
-    $("pill-base").dataset.papel = plano.base;
-    const pillInseridas = el("span", { className: "pill", textContent: PAPEL[plano.gavetaInseridas].toUpperCase() });
-    pillInseridas.dataset.papel = plano.gavetaInseridas;
-    if (plano.semInsercoes) {
-      $("inseridas").replaceChildren(`Nenhuma: todas as folhas são ${PAPEL[plano.base]}. ` +
-        "Imprimir só com o perfil acima, sem Folhas de inserção.");
-    } else {
-      $("inseridas").replaceChildren(
-        el("span", { textContent: `Fonte de papel: Gaveta ${plano.gavetaInseridas}` }), pillInseridas,
-        el("span", { textContent: `Imprimir em: Somente na frente · ${plural(plano.paginasInseridas.length, "folha", "folhas")}` }));
-    }
-    $("passo-inserir").hidden = plano.semInsercoes;
-    $("linhas-inserir").replaceChildren(...plano.linhas.map((l, k) => linhaInserir(l, k, plano)));
+    // Um só trabalho, ou várias partes: cada uma com o seu cartão e o seu download
+    $("nota-trabalho").textContent = nPartes > 1
+      ? `Mais de ${Logica.LIMITE_INSERCOES} folhas de inserção: o PDF foi partido em ${nPartes} partes. ` +
+        "Imprima-as pela ordem, cada uma inteira, seguindo o guia."
+      : "Imprima o PDF carimbado inteiro, num só trabalho, seguindo o guia.";
+    $("btn-carimbado").hidden = nPartes > 1;
+    $("partes").replaceChildren(...plano.partes.map(cartaoParte));
 
-    const { folhasOriginal: original, folhasCarimbado: carimbado, folhasFicheiros: separadas } = t;
+    const { folhasOriginal: original, folhasPartes, folhasFicheiros: separadas } = t;
+    const carimbado = folhasPartes.reduce((s, n) => s + n, 0);
     $("linha-conferencia").textContent = `"${t.nome}" = ${original} folhas  |  ` +
-      `PDF carimbado: ${carimbado} folhas ${original === carimbado ? "✓" : "✗"}`;
+      (nPartes > 1 ? `PDFs carimbados: ${folhasPartes.join(" + ")} = ${carimbado}` : `PDF carimbado: ${carimbado}`) +
+      ` folhas ${original === carimbado ? "✓" : "✗"}`;
     $("linha-conferencia").dataset.tipo = original === carimbado ? "idle" : "erro";
 
     // Modo antigo
@@ -1321,7 +1483,7 @@ const Logica = (() => {
   }
 
   $("btn-carimbado").addEventListener("click", () => {
-    if (trabalho && trabalho.carimbado) descarregar(trabalho.carimbado.blob, trabalho.carimbado.nome);
+    if (trabalho && trabalho.carimbados.length === 1) descarregar(trabalho.carimbados[0].blob, trabalho.carimbados[0].nome);
   });
   $("btn-guia").addEventListener("click", () => {
     if (trabalho && trabalho.guia) descarregar(trabalho.guia.blob, trabalho.guia.nome);
