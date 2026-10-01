@@ -25,7 +25,6 @@
     --card: #232730;
     --card-hover: #2b303b;
     --sub: #1a1d23;
-    --linha-alt: #20242c;
     --borda: #323845;
     --texto: #f1f3f7;
     --texto-sec: #a4acbb;
@@ -131,13 +130,8 @@
   #nome-trabalho { font-weight: 600; overflow-wrap: anywhere; }
   .nota { font-size: 13px; color: var(--texto-sec); }
   .acoes { display: flex; gap: 8px; flex-wrap: wrap; }
-  .acoes .btn, .acoes .btn-principal, #btn-zip { width: auto; }
+  .acoes .btn, .acoes .btn-principal { width: auto; }
   #btn-carimbado { min-width: 240px; }
-  .link {
-    height: 26px; padding: 0 8px; border: 0; border-radius: 6px;
-    background: transparent; color: var(--accent-texto); font-size: 13px; cursor: pointer;
-  }
-  .link:hover { background: var(--card-hover); }
 
   .pill {
     display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
@@ -175,35 +169,6 @@
   .campo .btn { width: auto; min-width: 116px; height: auto; min-height: 40px; }
   .btn.copiado { color: var(--sucesso); border-color: var(--sucesso); }
 
-  /* Modo antigo, recolhido: o ZIP com os blocos, sem alterações */
-  .antigo { border-top: 1px solid var(--borda); padding-top: 10px; }
-  .antigo summary { cursor: pointer; color: var(--texto-sec); font-size: 13px; font-weight: 600; padding: 4px 0; }
-  .antigo summary:hover { color: var(--texto); }
-  .antigo[open] { display: flex; flex-direction: column; gap: 12px; }
-  #linha-conferencia-zip { font-size: 13px; color: var(--texto-sec); white-space: pre-wrap; }
-
-  /* Lista dos blocos, só leitura: pela ordem dos nomes, que é a ordem de impressão */
-  .lista { max-height: 50vh; min-height: 120px; overflow-y: auto; padding: 6px; }
-  .linha {
-    display: grid; grid-template-columns: 36px auto minmax(0, 1fr) auto; column-gap: 10px; align-items: center;
-    padding: 8px 10px 4px 6px; border-radius: 6px; border-left: 3px solid transparent;
-  }
-  .linha:nth-child(even) { background: var(--linha-alt); }
-  .linha.etiqueta { border-left-color: var(--aviso); }
-  .linha .n { text-align: right; font: 13px/22px var(--mono); font-variant-numeric: tabular-nums; }
-  .linha .nome { font: 13px/22px var(--mono); overflow-wrap: anywhere; }
-  .linha .pill { justify-self: start; margin-left: 2px; }
-  .linha .folhas { font-size: 13px; text-align: right; white-space: nowrap; }
-  .linha .paginas { grid-column: 2 / 5; font-size: 13px; color: var(--texto-sec); overflow-wrap: anywhere; }
-  .linha .link { grid-column: 2 / 5; justify-self: start; margin-left: -8px; }
-  .encomendas { grid-column: 2 / 5; margin: 0 0 6px; padding: 6px; background: var(--sub); border-radius: 6px; overflow-x: auto; }
-  .encomendas div {
-    display: flex; justify-content: space-between; gap: 16px; padding: 2px 8px; border-radius: 4px;
-    font: 13px/20px var(--mono); font-variant-numeric: tabular-nums;
-  }
-  .encomendas div:nth-child(even) { background: var(--linha-alt); }
-  .encomendas span:last-child { color: var(--texto-sec); text-align: right; }
-
   #linha-conferencia { font-size: 13px; color: var(--texto-sec); white-space: pre-wrap; }
 
   /* Avisos e perguntas: só para avisos e erros, nunca para sucesso */
@@ -231,13 +196,12 @@
     .app { grid-template-columns: minmax(0, 1fr); height: auto; }
     .sidebar { padding: 24px 16px; overflow: visible; }
     main { padding: 20px 16px; }
-    .lista { max-height: 60vh; }
     .passo { grid-template-columns: minmax(0, 1fr); row-gap: 6px; }
     .acoes, .acoes .btn, .acoes .btn-principal { width: 100%; }
     .stats { gap: 8px; }
     .stat { padding: 10px 12px; }
     .stat b { font-size: 22px; }
-    #btn-zip, #btn-carimbado, .parte-topo .btn-principal { width: 100%; }
+    #btn-carimbado, .parte-topo .btn-principal { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -265,7 +229,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.3</div>
+      <div class="versao">Versão web 1.4</div>
     </div>
   </aside>
 
@@ -298,16 +262,6 @@
 
       <div class="partes" id="partes"></div>
       <div id="linha-conferencia"></div>
-
-      <details class="antigo" id="antigo">
-        <summary id="antigo-titulo">Modo antigo — blocos por papel</summary>
-        <div class="topo">
-          <div class="nota">Para usar se algum lote der problemas no driver. Extraia o ZIP e imprima pela ordem dos nomes; o Continuacao-Index vai no fim.</div>
-          <button class="btn" id="btn-zip" type="button">Descarregar ZIP</button>
-        </div>
-        <div class="card lista" id="lista" role="list" aria-label="Blocos"></div>
-        <div id="linha-conferencia-zip"></div>
-      </details>
     </section>
   </main>
 </div>
@@ -325,17 +279,15 @@
 
 <script src="vendor/pdfjs/pdf.min.js"></script>
 <script src="vendor/pdf-lib/pdf-lib.min.js"></script>
-<script src="vendor/jszip/jszip.min.js"></script>
 
 <script id="logica">
-// Mesma lógica do separar_gavetas.py (Separador de Papel em Python). Sem acesso ao DOM, para
-// poder ser testada à parte. O pdf.js lê (como o pdfplumber) e o pdf-lib escreve (como o pypdf).
+// A análise das páginas segue o separar_gavetas.py (Separador de Papel em Python) função a
+// função; a impressão com folhas de inserção existe só aqui. Sem acesso ao DOM, para poder ser
+// testada à parte. O pdf.js lê (como o pdfplumber) e o pdf-lib escreve (como o pypdf).
 const Logica = (() => {
   // Nome de cada tipo de papel. Internamente continua a ser 1 (normal) e 3 (etiqueta),
   // os números das gavetas da impressora.
   const PAPEL = { 1: "A4-Normal", 3: "A4-Etiqueta" };
-  const ROTULO_CONTINUACAO = "CONTINUAÇÃO-INDEX";
-  const NOME_LOTE_ORFAS = `Continuacao-Index_${PAPEL[1]}.pdf`;
   const NOME_GUIA = "00_guia_impressao.txt";
   const RE_NUMERO_ENCOMENDA = /^\p{Nd}+_\p{Nd}+$/u;
 
@@ -518,54 +470,10 @@ const Logica = (() => {
     return info;
   }
 
-  // ------------------------------------------------------------ agrupamento
+  // ------------------------------------------------------------ continuações, páginas e formato
 
-  // Folha de índice órfã: sem etiqueta e sem o número visível
+  // Continuação (folha de índice órfã): sem etiqueta e sem o número visível
   const eOrfa = p => p.gaveta === 1 && p.estado !== "visivel";
-
-  function separarOrfas(info) {
-    const orfas = [], restantes = [];
-    info.forEach((p, i) => (eOrfa(p) ? orfas : restantes).push(i));
-    return [orfas, restantes];
-  }
-
-  // Índices agrupados por encomenda, pela ordem de aparição (Map mantém a ordem, como o dict)
-  function porEncomenda(info, indices) {
-    const grupos = new Map();
-    for (const i of indices) {
-      const n = info[i].encomenda;
-      if (!grupos.has(n)) grupos.set(n, []);
-      grupos.get(n).push(i);
-    }
-    return grupos;
-  }
-
-  function ordemDasEncomendas(info, principais, orfas) {
-    const ordem = [];
-    for (const i of [...principais, ...orfas]) {
-      const n = info[i].encomenda;
-      if (n && !ordem.includes(n)) ordem.push(n);
-    }
-    return ordem;
-  }
-
-  function agruparOrfasPorEncomenda(info, orfas, ordem = []) {
-    const grupos = porEncomenda(info, orfas);
-    const seguidas = ordem.filter(n => grupos.has(n));
-    const restantes = [...grupos.keys()].filter(n => !seguidas.includes(n));
-    return [...seguidas, ...restantes].flatMap(n => grupos.get(n));
-  }
-
-  // Páginas contíguas do mesmo papel, pela ordem original: [[gaveta, [indices]], …]
-  function agruparBlocos(info, indices) {
-    const blocos = [];
-    for (const i of indices ?? info.keys()) {
-      const g = info[i].gaveta;
-      if (blocos.length && blocos[blocos.length - 1][0] === g) blocos[blocos.length - 1][1].push(i);
-      else blocos.push([g, [i]]);
-    }
-    return blocos;
-  }
 
   // [2, 5, 10, 11] -> ["2", "5", "10-11"]
   function intervalos(numeros) {
@@ -664,7 +572,7 @@ const Logica = (() => {
     }
     cortes.push([inicio, info.length]);
 
-    // Como na cobertura dos blocos: troços seguidos, todas as páginas uma vez, nenhum acima do limite
+    // Verificação de cobertura: troços seguidos, todas as páginas uma vez, nenhum acima do limite
     let esperado = 0;
     for (const [a, b] of cortes) {
       let n = 0;
@@ -892,7 +800,7 @@ const Logica = (() => {
   // Um PDF por parte do plano: cópia do troço do original, com as mesmas páginas pela mesma
   // ordem; só as continuações levam o carimbo do número de encomenda. Cada um é relido no fim:
   // se as folhas de uma parte, ou a soma de todas, não baterem, não sai nada.
-  async function pdfsCarimbados(origem, info, nomePdf, partes) {
+  async function pdfsCarimbados(origem, info, nomePdf, partes, progresso = () => {}) {
     const raiz = `${nomeSeguro(semExtensao(nomePdf))}_carimbado`;
     // Com 10 partes ou mais, "10de12" ficaria antes de "2de12" na ordem dos nomes
     const largura = String(partes.length).length;
@@ -915,6 +823,7 @@ const Logica = (() => {
           "Nada foi entregue: separe o PDF outra vez.");
       }
       lista.push({ nome, bytes, carimbadas: aCarimbar.length, folhas: n });
+      progresso(parte.n / partes.length);
     }
     const soma = lista.reduce((s, c) => s + c.folhas, 0);
     if (soma !== origem.getPageCount() || soma !== info.length) {
@@ -936,12 +845,10 @@ const Logica = (() => {
     }
   }
 
-  // gerar_blocos do Python. dados: Uint8Array do PDF; nomePdf: nome do ficheiro.
-  // Devolve {blocos: [{nome, gaveta, pag_ini, pag_fim, folhas, paginas_txt, paginas_frase,
-  // encomendas, orfas, bytes}], guia: {nome, texto}, avisos, nPaginas} para o modo antigo (ZIP)
-  // e, para a impressão pelo PDF carimbado, {info, plano, carimbados: [{nome, bytes, carimbadas,
-  // folhas}] (um por parte do plano), guiaUnico: {nome, texto}}.
-  async function separar(dados, nomePdf, { progresso = () => {}, log = () => {} } = {}) {
+  // dados: Uint8Array do PDF; nomePdf: nome do ficheiro. Devolve {info, plano, carimbados:
+  // [{nome, bytes, carimbadas, folhas}] (um por parte do plano), guiaUnico: {nome, texto},
+  // avisos, nPaginas}.
+  async function separar(dados, nomePdf, { progresso = () => {} } = {}) {
     let origem, pdf;
     try {
       origem = await PDFLib.PDFDocument.load(dados, { updateMetadata: false });
@@ -958,169 +865,24 @@ const Logica = (() => {
       // Análise: 70 % da barra; escrita: o resto
       const info = await analisarPaginas(pdf, caixas, x => progresso(0.7 * x));
       verificarFormato(info, paginasLib.map(p => p.getRotation().angle));
-      const antigo = await escrever(origem, info, nomePdf, { progresso: x => progresso(0.7 + 0.2 * x), log });
       const plano = planoImpressao(info);
-      const carimbados = await pdfsCarimbados(origem, info, nomePdf, plano.partes);
+      const carimbados = await pdfsCarimbados(origem, info, nomePdf, plano.partes, x => progresso(0.7 + 0.3 * x));
       progresso(1);
       return {
-        ...antigo, info, plano, carimbados,
+        info, plano, carimbados, nPaginas: info.length,
         guiaUnico: { nome: NOME_GUIA, texto: guiaImpressaoUnica(nomePdf, carimbados.map(c => c.nome), plano, info) },
-        avisos: [...new Set([...plano.avisos, ...antigo.avisos])],
+        avisos: plano.avisos,
       };
     } finally {
       pdf.destroy();
     }
   }
 
-  async function escrever(origem, info, nomePdf, { progresso, log }) {
-    const nPaginas = origem.getPageCount();
-    let [orfas, restantes] = separarOrfas(info);
-    const ordem = ordemDasEncomendas(info, restantes, orfas);
-    orfas = agruparOrfasPorEncomenda(info, orfas, ordem);
-    const blocos = agruparBlocos(info, restantes);
-
-    // Cada página do original num e num só ficheiro, verificado antes de escrever
-    const usadas = [...blocos.flatMap(([, ind]) => ind), ...orfas].sort((a, b) => a - b);
-    if (usadas.length !== info.length || usadas.some((v, i) => v !== i)) {
-      throw new Error("A separação não cobre todas as páginas do original exatamente uma vez; " +
-        "nada foi escrito.");
-    }
-
-    const gerados = [];
-    const total = blocos.length + (orfas.length ? 1 : 0);
-    // Com mais de 99 blocos, "100_" ficaria antes de "11_" na ordem dos nomes
-    const largura = Math.max(2, String(total).length);
-    const nEtiqueta = restantes.filter(i => info[i].gaveta === 3).length;
-    const nNormal = info.length - nEtiqueta;
-
-    const resumo = [`Guia de impressão — ${nomePdf}`,
-      `Total de páginas: ${nPaginas}`,
-      `Ficheiros a imprimir: ${total}, pela ordem dos nomes`,
-      `Conferência final — a pilha impressa tem de ter ${info.length} folhas: ` +
-      `${nEtiqueta} ${PAPEL[3]} + ${nNormal} ${PAPEL[1]}` +
-      (orfas.length ? ` (das quais ${orfas.length} em ${ROTULO_CONTINUACAO})` : ""),
-      ""];
-
-    function registar(nome, gaveta, indices, saoOrfas, bytes) {
-      // No lote de índices a ordem pode não ser a do original; as páginas descrevem-se por
-      // ordem crescente, porque aqui só interessa quais são.
-      const numeros = indices.map(i => i + 1).sort((a, b) => a - b);
-      gerados.push({
-        nome, gaveta,
-        pag_ini: numeros[0], pag_fim: numeros[numeros.length - 1],
-        folhas: indices.length,
-        paginas_txt: descricaoPaginas(numeros),
-        paginas_frase: frasePaginas(numeros),
-        encomendas: [...porEncomenda(info, indices).keys()],
-        // As mesmas linhas da conferência do guia: encomenda, folhas e páginas do original
-        detalhe: [...porEncomenda(info, indices)].map(([encomenda, paginas]) => ({
-          encomenda, folhas: paginas.length,
-          paginas_frase: frasePaginas(paginas.map(p => p + 1).sort((a, b) => a - b)),
-        })),
-        orfas: saoOrfas,
-        bytes,
-      });
-      return gerados[gerados.length - 1].paginas_frase;
-    }
-
-    function conferencia(indices) {
-      return [...porEncomenda(info, indices)].map(([encomenda, paginas]) => {
-        const etiqueta = (encomenda || "SEM NÚMERO").padEnd(18);
-        const fls = paginas.length === 1 ? "1 folha" : `${paginas.length} folhas`;
-        return `    ${etiqueta} ${fls}   (${frasePaginas(paginas.map(p => p + 1).sort((a, b) => a - b))} do original)`;
-      });
-    }
-
-    async function novoPdf(indices) {
-      const doc = await PDFLib.PDFDocument.create({ updateMetadata: false });
-      for (const p of await doc.copyPages(origem, indices)) doc.addPage(p);
-      return doc;
-    }
-
-    // ------------------------------------------------ blocos normais
-    for (const [k, [gaveta, indices]] of blocos.entries()) {
-      const n = k + 1;
-      const bytes = await (await novoPdf(indices)).save();
-      const nome = `${zeros(n, largura)}_${PAPEL[gaveta]}.pdf`;
-      const frase = registar(nome, gaveta, indices, false, bytes);
-      const encomendas = gerados[gerados.length - 1].encomendas;
-      const linha = `${zeros(n, largura)}. ${nome}  ->  Papel ${PAPEL[gaveta]}  ->  ` +
-        `${indices.length} folhas, ${encomendas.length} encomendas`;
-      resumo.push(linha, `    (${frase} do original)`, ...conferencia(indices), "");
-      log(linha);
-      progresso(n / total);
-    }
-
-    // ------------------------------------------------ lote das folhas de índice
-    const semEncomenda = [];
-    const avisos = [];
-    if (orfas.length) {
-      const doc = await novoPdf(orfas);
-      const fonte = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
-      doc.getPages().forEach((pagina, j) => {
-        const numero = info[orfas[j]].encomenda;
-        // A folha não mostra o número: leva carimbado o código do cabeçalho, encomenda_item id
-        if (numero) carimbar(pagina, numero, fonte);
-        else semEncomenda.push(orfas[j] + 1);
-      });
-      const bytes = await doc.save();
-      const nome = NOME_LOTE_ORFAS;
-      const frase = registar(nome, 1, orfas, true, bytes);
-      const encomendas = gerados[gerados.length - 1].encomendas;
-      const linha = `${zeros(blocos.length + 1, largura)}. ${nome}  ->  Papel ${PAPEL[1]} — ` +
-        `${ROTULO_CONTINUACAO}  ->  ${orfas.length} folhas, ${encomendas.length} encomendas`;
-      resumo.push(linha, `    (${frase} do original)`,
-        "    Carimbadas no topo com o número de encomenda, pela mesma sequência da pilha principal:",
-        ...conferencia(orfas), "");
-      log(linha);
-      progresso(1);
-    }
-
-    if (semEncomenda.length) {
-      const aviso = avisoSemNumero(semEncomenda);
-      resumo.push("", aviso);
-      log(aviso);
-      avisos.push(aviso);
-    }
-
-    // _verificar_saida: relê cada ficheiro e confirma as folhas e a soma
-    let soma = 0;
-    for (const b of gerados) {
-      const n = (await PDFLib.PDFDocument.load(b.bytes, { updateMetadata: false })).getPageCount();
-      if (n !== b.folhas) {
-        throw new Error(`${b.nome} ficou com ${n} folhas em vez de ${b.folhas}. ` +
-          "Separe o PDF outra vez antes de imprimir.");
-      }
-      soma += n;
-    }
-    if (soma !== nPaginas) {
-      throw new Error(`Os ficheiros gerados somam ${soma} folhas, mas o original tem ` +
-        `${nPaginas}. Separe o PDF outra vez antes de imprimir.`);
-    }
-    log(`Verificado: os ${gerados.length} ficheiros somam as ${nPaginas} folhas do original.`);
-
-    // Fim de linha do Windows, como o Python o escreve no posto
-    return {
-      blocos: gerados, guia: { nome: NOME_GUIA, texto: resumo.join("\r\n") }, avisos, nPaginas,
-      // Conferência final do guia: folhas por papel
-      folhas: { etiqueta: nEtiqueta, normal: nNormal, continuacao: orfas.length },
-    };
-  }
-
-  // O ZIP com os blocos e o guia, tal como o Python os deixa na subpasta da hot folder
-  async function criarZip(resultado) {
-    const zip = new JSZip();
-    for (const b of resultado.blocos) zip.file(b.nome, b.bytes, { binary: true });
-    zip.file(resultado.guia.nome, resultado.guia.texto);
-    return zip.generateAsync({ type: "uint8array", compression: "STORE" });
-  }
-
   return {
-    PAPEL, ROTULO_CONTINUACAO, PERFIL, separar, criarZip, contarFolhas, nomeSeguro, semExtensao,
+    PAPEL, PERFIL, separar, contarFolhas, nomeSeguro, semExtensao,
     // expostas para os testes
     palavras, imagens, numeroNoCabecalho, detectaEtiqueta, analisarPaginas, caixaDe, abrirParaLeitura, descricaoPaginas,
-    agruparBlocos, agruparOrfasPorEncomenda, ordemDasEncomendas, separarOrfas, verificarFormato, escrever,
-    intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsCarimbados, guiaImpressaoUnica,
+    verificarFormato, intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsCarimbados, guiaImpressaoUnica,
     LIMITE_CARACTERES, LIMITE_INSERCOES,
   };
 })();
@@ -1133,11 +895,11 @@ const Logica = (() => {
   const $ = id => document.getElementById(id);
   const fmt = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
   const plural = (n, s, p) => `${n} ${n === 1 ? s : p}`;
-  const { PAPEL, ROTULO_CONTINUACAO } = Logica;
+  const { PAPEL } = Logica;
 
   let pdf = null;         // {nome, dados: Uint8Array, folhas}
   // {nome, plano, carimbados: [{nome, blob}] (um por parte), guia: {nome, blob}, folhasPartes,
-  //  blocos, folhas, folhasOriginal, folhasFicheiros, zip, nomeZip}
+  //  folhasOriginal}
   let trabalho = null;
   let ocupado = false;
 
@@ -1230,12 +992,12 @@ const Logica = (() => {
   $("btn-separar").addEventListener("click", async () => {
     if (ocupado) return;
     if (!pdf) { await mensagem("Escolha primeiro o PDF.", "info"); return; }
-    if (!window.pdfjsLib || !window.PDFLib || !window.JSZip) {
+    if (!window.pdfjsLib || !window.PDFLib) {
       await mensagem("As bibliotecas de PDF não carregaram. Recarregue a página.", "erro");
       return;
     }
 
-    // O resultado anterior sai já de cena: se esta separação falhar, não fica à vista um ZIP
+    // O resultado anterior sai já de cena: se esta separação falhar, não fica à vista um plano
     // que já não corresponde a este PDF.
     trabalho = null;
     const atual = pdf;
@@ -1245,14 +1007,11 @@ const Logica = (() => {
     estado(`A separar ${atual.nome}…`, "ativo");
     estadoPdf("A separar…", "ativo");
     try {
-      const res = await Logica.separar(atual.dados, atual.nome, { progresso, log: t => console.log(t) });
-      // As duas contagens são feitas aqui, com o pdf.js, a partir dos PDFs: o original e cada
-      // um dos ficheiros acabados de gerar. É a conferência independente do motor.
-      const porFicheiro = [];
-      for (const b of res.blocos) porFicheiro.push(await Logica.contarFolhas(b.bytes));
-      const folhasFicheiros = porFicheiro.includes(null) ? null : porFicheiro.reduce((s, n) => s + n, 0);
+      const res = await Logica.separar(atual.dados, atual.nome, { progresso });
+      // As contagens são feitas aqui, com o pdf.js, a partir dos PDFs: o original e cada um dos
+      // PDFs acabados de gerar. É a conferência independente do motor: cada parte tem de ter as
+      // folhas do plano, e todas juntas as do original.
       const folhasOriginal = await Logica.contarFolhas(atual.dados);
-      // Cada parte tem de ter as folhas do plano, e todas juntas as do original
       const folhasPartes = [];
       for (const c of res.carimbados) folhasPartes.push(await Logica.contarFolhas(c.bytes));
       const folhasCarimbado = folhasPartes.includes(null) ? null : folhasPartes.reduce((s, n) => s + n, 0);
@@ -1267,18 +1026,11 @@ const Logica = (() => {
           : `Os PDFs carimbados têm ${folhasPartes.map(txt).join(" + ")} folhas` +
             (parteErrada ? ` (a parte ${parteErrada.n} devia ter ${parteErrada.total})` : "") +
             `, e o original tem ${txt(folhasOriginal)}. Este PDF não passa para a impressão.`;
-      } else if (folhasFicheiros !== folhasOriginal) {
-        estadoPdf(`✗ ${txt(folhasFicheiros)}/${txt(folhasOriginal)} folhas nos blocos — não imprimir`, "erro");
-        erro = `Os ficheiros separados somam ${txt(folhasFicheiros)} folhas, mas o original tem ` +
-          `${txt(folhasOriginal)}. Este PDF não passa para a impressão.`;
       } else {
-        const zip = new Blob([await Logica.criarZip(res)], { type: "application/zip" });
         trabalho = {
-          nome: atual.nome, plano: res.plano, folhasPartes,
+          nome: atual.nome, plano: res.plano, folhasPartes, folhasOriginal,
           carimbados: res.carimbados.map(c => ({ nome: c.nome, blob: new Blob([c.bytes], { type: "application/pdf" }) })),
           guia: { nome: res.guiaUnico.nome, blob: new Blob([res.guiaUnico.texto], { type: "text/plain;charset=utf-8" }) },
-          blocos: res.blocos, folhas: res.folhas, folhasOriginal, folhasFicheiros, zip,
-          nomeZip: `${Logica.nomeSeguro(Logica.semExtensao(atual.nome))}.zip`,
         };
         avisos = res.avisos;
         estadoPdf(`OK · ${contagem} ✓`, "ok");
@@ -1314,45 +1066,10 @@ const Logica = (() => {
       : "Escolha o PDF e carregue em Separar.";
   }
 
-  const descricaoGaveta = b => {
-    const papel = PAPEL[b.gaveta].toUpperCase();
-    return b.orfas ? `${papel} · ${ROTULO_CONTINUACAO}` : papel;
-  };
-
   function el(tag, props = {}, ...filhos) {
     const e = Object.assign(document.createElement(tag), props);
     e.append(...filhos);
     return e;
-  }
-
-  // Uma linha por bloco, com as encomendas que traz (as linhas de conferência do guia)
-  function linhaBloco(b, i) {
-    const encomendas = el("div", { className: "encomendas", hidden: true });
-    const botao = el("button", { className: "link", type: "button", textContent: `▸  Ver encomendas (${b.detalhe.length})` });
-    botao.setAttribute("aria-expanded", "false");
-    botao.addEventListener("click", () => {
-      if (!encomendas.childElementCount) {
-        for (const d of b.detalhe) {
-          encomendas.append(el("div", {},
-            el("span", { textContent: d.encomenda || "SEM NÚMERO" }),
-            el("span", { textContent: `${plural(d.folhas, "folha", "folhas")} · ${d.paginas_frase}` })));
-        }
-      }
-      encomendas.hidden = !encomendas.hidden;
-      botao.textContent = `${encomendas.hidden ? "▸  Ver" : "▾  Ocultar"} encomendas (${b.detalhe.length})`;
-      botao.setAttribute("aria-expanded", String(!encomendas.hidden));
-    });
-    const pill = el("span", { className: "pill", textContent: descricaoGaveta(b) });
-    pill.dataset.papel = b.gaveta;
-    const linha = el("div", { className: `linha${b.gaveta === 3 ? " etiqueta" : ""}` },
-      el("span", { className: "n", textContent: String(i + 1) }),
-      el("span", { className: "nome", textContent: b.nome }),
-      pill,
-      el("span", { className: "folhas", textContent: plural(b.folhas, "folha", "folhas") }),
-      el("span", { className: "paginas", textContent: `${b.paginas_frase} do original` }),
-      botao, encomendas);
-    linha.setAttribute("role", "listitem");
-    return linha;
   }
 
   // Copia a linha para o campo Inserir do driver. Sem acesso ao clipboard, deixa-a selecionada.
@@ -1455,20 +1172,12 @@ const Logica = (() => {
     $("btn-carimbado").hidden = nPartes > 1;
     $("partes").replaceChildren(...plano.partes.map(cartaoParte));
 
-    const { folhasOriginal: original, folhasPartes, folhasFicheiros: separadas } = t;
+    const { folhasOriginal: original, folhasPartes } = t;
     const carimbado = folhasPartes.reduce((s, n) => s + n, 0);
     $("linha-conferencia").textContent = `"${t.nome}" = ${original} folhas  |  ` +
       (nPartes > 1 ? `PDFs carimbados: ${folhasPartes.join(" + ")} = ${carimbado}` : `PDF carimbado: ${carimbado}`) +
       ` folhas ${original === carimbado ? "✓" : "✗"}`;
     $("linha-conferencia").dataset.tipo = original === carimbado ? "idle" : "erro";
-
-    // Modo antigo
-    $("antigo-titulo").textContent = `Modo antigo — blocos por papel (${plural(t.blocos.length, "bloco", "blocos")})`;
-    $("lista").replaceChildren(...t.blocos.map(linhaBloco));
-    $("lista").scrollTop = 0;
-    $("linha-conferencia-zip").textContent = `"${t.nome}" = ${original} folhas  |  ` +
-      `Contagem total blocos separados: ${separadas} folhas ${original === separadas ? "✓" : "✗"}`;
-    $("linha-conferencia-zip").dataset.tipo = original === separadas ? "idle" : "erro";
     $("vista").scrollTop = 0;
     atualizarVista();
   }
@@ -1487,9 +1196,6 @@ const Logica = (() => {
   });
   $("btn-guia").addEventListener("click", () => {
     if (trabalho && trabalho.guia) descarregar(trabalho.guia.blob, trabalho.guia.nome);
-  });
-  $("btn-zip").addEventListener("click", () => {
-    if (trabalho && trabalho.zip) descarregar(trabalho.zip, trabalho.nomeZip);
   });
 
   addEventListener("beforeunload", e => {
