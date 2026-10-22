@@ -190,7 +190,6 @@
   }
   .conteudo { display: grid; gap: 6px; min-width: 0; }
   .valor { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; min-height: 28px; }
-  .perfil-base { font: 600 20px/1.3 var(--display); }
   .ficheiro { font: 13px/1.4 var(--mono); color: var(--texto-sec); overflow-wrap: anywhere; }
   .dica { font-size: 12.5px; color: var(--texto-sec); }
   .valor .btn-principal { width: auto; min-width: 200px; }
@@ -592,6 +591,13 @@ const Logica = (() => {
         "folhas de índice seguintes ficariam com o número da anterior; nada foi escrito." +
         (info.some(p => p.rodapeExpress) ? outroTipo("express") : ""));
     }
+    // Folhas de etiqueta Express (número visível e rodapé, sem imagem) num PDF de álbum iriam para
+    // A4-Normal sem erro: um PDF misto passaria com as etiquetas dos Biscates no papel errado
+    const etiquetasExpress = paginas(p => p.estado === "visivel" && p.rodapeExpress && !p.imagemEtiqueta);
+    if (etiquetasExpress.length) {
+      throw new Error(`Escolheu ${TIPOS.album}, mas há folhas de etiqueta "DreambooksPro Express" ` +
+        `(${frasePaginas(etiquetasExpress)}), que iriam para A4-Normal; nada foi escrito.` + outroTipo("express"));
+    }
     // Um PDF Express sem miniaturas passaria a verificação acima com zero etiquetas
     if (!info.some(p => p.gaveta === 3) && info.some(p => p.rodapeExpress)) {
       throw new Error(`Não encontrei nenhuma etiqueta de envio em imagem, e o PDF tem folhas ` +
@@ -860,6 +866,8 @@ const Logica = (() => {
   //  folhasOriginal}
   let trabalho = null;
   let ocupado = false;
+  let aLer = false;       // a ler o PDF acabado de escolher
+  let leituras = 0;       // conta as escolhas de PDF: uma leitura antiga que acabe tarde não conta
 
   // ---------------------------------------------------------------- pop-ups (só avisos e erros)
   function mensagem(texto, tipo = "aviso") {
@@ -892,8 +900,36 @@ const Logica = (() => {
       await mensagem(`Não é possível usar:\n\n${ficheiro.name}\n\n(não é um ficheiro PDF)`);
       return;
     }
-    const dados = new Uint8Array(await ficheiro.arrayBuffer());
-    const folhas = await Logica.contarFolhas(dados);
+    // O PDF anterior e o seu plano saem já de cena: senão ficavam à vista as linhas do Inserir de
+    // outro PDF, e um Separar carregado durante a leitura separava o PDF anterior. O Separar fica
+    // desativado até acabar a leitura; só a última escolha conta.
+    const minha = ++leituras;
+    pdf = null;
+    trabalho = null;
+    aLer = true;
+    $("btn-separar").disabled = true;
+    $("chip").classList.remove("escolhido");
+    $("nome-pdf").textContent = ficheiro.name;
+    $("folhas-pdf").hidden = true;
+    $("estado-pdf").hidden = true;
+    estado("Pronto");
+    atualizarVista();
+    let dados, folhas;
+    try {
+      dados = new Uint8Array(await ficheiro.arrayBuffer());
+      folhas = await Logica.contarFolhas(dados);
+    } catch (e) {
+      if (minha !== leituras) return;
+      aLer = false;
+      $("btn-separar").disabled = false;
+      $("nome-pdf").textContent = "Nenhum PDF escolhido";
+      atualizarVista();
+      await mensagem(`Não consegui ler:\n\n${ficheiro.name}\n\n${e.message || e}`, "erro");
+      return;
+    }
+    if (minha !== leituras) return;
+    aLer = false;
+    $("btn-separar").disabled = false;
     pdf = { nome: ficheiro.name, dados, folhas };
     $("chip").classList.add("escolhido");
     $("nome-pdf").textContent = pdf.nome;
@@ -966,7 +1002,7 @@ const Logica = (() => {
   const progresso = x => { $("progresso").firstElementChild.style.width = `${x * 100}%`; };
 
   $("btn-separar").addEventListener("click", async () => {
-    if (ocupado) return;
+    if (ocupado || aLer) return;
     const tipo = tipoEscolhido();
     if (!tipo) {
       document.querySelector(".tipos").classList.add("falta");
@@ -1048,6 +1084,7 @@ const Logica = (() => {
     $("vista").hidden = !trabalho;
     $("vazio").hidden = !!trabalho;
     $("vazio").textContent = ocupado ? "A separar o PDF…"
+      : aLer ? "A ler o PDF…"
       : pdf ? "Carregue em Separar para preparar a impressão."
       : "Escolha o PDF e carregue em Separar.";
   }
@@ -1132,7 +1169,7 @@ const Logica = (() => {
         "Abra no Acrobat e imprima inteiro (Páginas: Tudo), num só trabalho."));
     }
     cartao.append(passo("Impressora", valor(
-      el("b", { className: "perfil-base", textContent: plano.perfilBase }), pillPapel(plano.base))));
+      el("span", { textContent: "Fonte de papel:" }), pillPapel(plano.base))));
     if (!parte.paginasInseridas.length) {
       cartao.append(passo("Folhas de inserção", valor(
         `Nenhuma: todas as folhas são ${PAPEL[plano.base]}. Imprimir só com o perfil acima, sem Folhas de inserção.`)));
@@ -1140,7 +1177,7 @@ const Logica = (() => {
     }
     cartao.append(
       passo("Folhas de inserção", valor(
-        el("span", { textContent: `Fonte de papel: Gaveta ${plano.gavetaInseridas}` }), pillPapel(plano.gavetaInseridas),
+        el("span", { textContent: "Fonte de papel:" }), pillPapel(plano.gavetaInseridas),
         el("span", { textContent: "Imprimir em: Somente na frente" })),
         "Propriedades › Fonte de papel › Seleção do papel: Folhas de inserção › Configurações › Folhas inseridas"),
       passo("Inserir", el("div", { className: "inserir" }, ...parte.linhas.map((l, i) => linhaInserir(l, i, parte)))));
