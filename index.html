@@ -36,6 +36,7 @@
     --sucesso-hover: #1a8550;
     --aviso: #e0a526;
     --erro: #e5484d;
+    --sucesso-texto: #5fd49a;
     --trilho: #2f3542;
     /* Papel autocolante: o destaque mais forte, é o que custa dinheiro se for trocado */
     --etiqueta-fundo: #3d2f0c;
@@ -123,7 +124,27 @@
 
   .barra { height: 6px; border-radius: 3px; background: var(--trilho); overflow: hidden; flex: none; }
   .barra > i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--accent); transition: width .15s; }
-  #progresso { margin-top: -4px; }
+  /* Progresso, igual nas três apps da linha (no Python é o ui.Progresso): a barra fina e, por
+     baixo, o que está a fazer à esquerda e a percentagem e o tempo que falta à direita */
+  /* min-width 0 e minmax: um nome de ficheiro comprido corta-se com reticências, não alarga a página */
+  .progresso { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 6px; margin-top: -4px; transition: opacity .2s; }
+  .progresso.a-sair { opacity: 0; }
+  .progresso .barra > i { background: var(--accent); transition: width .15s, background-color .2s; }
+  .progresso[data-estado="ok"] .barra > i { background: var(--sucesso); }
+  .progresso[data-estado="erro"] .barra > i { background: var(--erro); }
+  .progresso[data-estado="indeterminado"] .barra > i { width: 30% !important; animation: progresso-desliza 1.3s ease-in-out infinite; }
+  @keyframes progresso-desliza { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+  .progresso-legenda {
+    display: flex; justify-content: space-between; gap: 16px; min-height: 18px;
+    font-size: 12.5px; line-height: 18px; color: var(--texto-sec); font-variant-numeric: tabular-nums;
+  }
+  .progresso-detalhe { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .progresso-valor { flex: none; white-space: nowrap; }
+  .progresso[data-estado="ok"] .progresso-legenda { color: var(--sucesso-texto); }
+  .progresso[data-estado="erro"] .progresso-legenda { color: var(--erro); }
+  @media (prefers-reduced-motion: reduce) {
+    .progresso[data-estado="indeterminado"] .barra > i { animation: none; width: 100% !important; opacity: .4; }
+  }
 
   .vazio { flex: 1; display: grid; place-items: center; padding: 48px 16px; text-align: center; color: var(--texto-sec); }
 
@@ -275,7 +296,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.6</div>
+      <div class="versao">Versão web 1.7</div>
     </div>
   </aside>
 
@@ -284,7 +305,10 @@
       <h2>Impressão</h2>
       <div id="estado" role="status">Pronto</div>
     </div>
-    <div class="barra" id="progresso" hidden><i></i></div>
+    <div class="progresso" id="progresso" role="progressbar" aria-label="Progresso" aria-valuemin="0" aria-valuemax="100" hidden>
+      <div class="barra"><i></i></div>
+      <div class="progresso-legenda"><span class="progresso-detalhe"></span><span class="progresso-valor"></span></div>
+    </div>
 
     <div class="vazio" id="vazio" hidden></div>
 
@@ -514,7 +538,7 @@ const Logica = (() => {
       const gaveta = tipo === "express" ? (estado === "visivel" ? 3 : 1) : (imagemEtiqueta ? 3 : 1);
       info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, rodapeExpress });
       pagina.cleanup();
-      progresso((i + 1) / pdf.numPages);
+      progresso((i + 1) / pdf.numPages, { atual: i + 1, total: pdf.numPages });
     }
     let atual = null;
     for (const p of info) {
@@ -779,18 +803,20 @@ const Logica = (() => {
     const largura = String(partes.length).length;
     const lista = [];
     for (const parte of partes) {
+      const nome = `${raiz}_${zeros(parte.n, largura)}de${partes.length}.pdf`;
+      const onde = { atual: parte.n, total: partes.length, nome };
+      progresso((parte.n - 1) / partes.length, onde);
       const indices = Array.from({ length: parte.total }, (_, j) => parte.de - 1 + j);
       const doc = await PDFLib.PDFDocument.create({ updateMetadata: false });
       for (const p of await doc.copyPages(origem, indices)) doc.addPage(p);
       const bytes = await doc.save();
-      const nome = `${raiz}_${zeros(parte.n, largura)}de${partes.length}.pdf`;
       const n = (await PDFLib.PDFDocument.load(bytes, { updateMetadata: false })).getPageCount();
       if (n !== parte.total) {
         throw new Error(`${nome} ficou com ${n} folhas em vez de ${parte.total}. ` +
           "Nada foi entregue: separe o PDF outra vez.");
       }
       lista.push({ nome, bytes, folhas: n });
-      progresso(parte.n / partes.length);
+      progresso(parte.n / partes.length, onde);
     }
     const soma = lista.reduce((s, c) => s + c.folhas, 0);
     if (soma !== origem.getPageCount() || soma !== info.length) {
@@ -818,6 +844,7 @@ const Logica = (() => {
   async function separar(dados, nomePdf, { progresso = () => {}, tipo } = {}) {
     if (!TIPOS[tipo]) throw new Error("Escolha o tipo de PDF antes de separar.");
     let origem, pdf;
+    progresso(0, { fase: "abrir" });
     try {
       origem = await PDFLib.PDFDocument.load(dados, { updateMetadata: false });
       pdf = await abrirParaLeitura(dados);
@@ -830,11 +857,15 @@ const Logica = (() => {
         throw new Error("O pdf.js e o pdf-lib não leem o mesmo número de páginas; nada foi escrito.");
       }
       const caixas = paginasLib.map(caixaDe);
-      // Análise: 70 % da barra; escrita: o resto
-      const info = await analisarPaginas(pdf, caixas, x => progresso(0.7 * x), tipo);
+      // A base é o papel com mais folhas, por isso as inserções são no máximo metade das folhas:
+      // até 2 × LIMITE_INSERCOES folhas sai sempre uma só parte e a análise é a barra toda. Acima
+      // disso pode haver partes, e a escrita leva cerca de 30 % do tempo (medido no triplicado).
+      const peso = pdf.numPages > 2 * LIMITE_INSERCOES ? 0.7 : 1;
+      const info = await analisarPaginas(pdf, caixas, (x, d) => progresso(peso * x, { fase: "analisar", ...d }), tipo);
       verificarFormato(info, paginasLib.map(p => p.getRotation().angle), tipo);
       const plano = planoImpressao(info);
-      const pdfs = await pdfsPartes(origem, info, nomePdf, plano.partes, x => progresso(0.7 + 0.3 * x));
+      const pdfs = await pdfsPartes(origem, info, nomePdf, plano.partes,
+        (x, d) => progresso(peso + (1 - peso) * x, { fase: "partes", ...d }));
       progresso(1);
       return { info, plano, pdfs, nPaginas: info.length, tipo, avisos: plano.avisos };
     } finally {
@@ -850,6 +881,99 @@ const Logica = (() => {
     LIMITE_CARACTERES, LIMITE_INSERCOES,
   };
 })();
+</script>
+
+<script>
+// Barra de progresso da linha "Processamento", igual nas três apps (no Python é o ui.Progresso).
+//   iniciar(detalhe)     mostra-a, numa fase sem medida
+//   fase(detalhe)        fase sem medida (abrir um PDF, conferir): a barra desliza
+//   atualizar(x, detalhe) põe-na em x, de 0 a 1; sem detalhe fica o anterior
+//   concluir(ok, detalhe) verde (ou vermelha), e recolhe-a passados 1,5 s
+// O tempo que falta mede-se desde o início da fase com medida, e só aparece com 1,5 s e 5 % feitos.
+function criarProgresso(el, tituloBase = document.title) {
+  const barra = el.querySelector(".barra > i");
+  const detalheEl = el.querySelector(".progresso-detalhe");
+  const valorEl = el.querySelector(".progresso-valor");
+  const pct = x => `${Math.floor(x * 100)}\u00a0%`;
+  const tempo = s => {
+    if (s < 60) return `${Math.max(1, Math.round(s))} s`;
+    const r = Math.round(s / 5) * 5;
+    return r % 60 ? `${Math.floor(r / 60)} min ${r % 60} s` : `${r / 60} min`;
+  };
+  let estado = "indeterminado", x = 0, detalhe = "", valor = "";
+  let t0 = 0, base = null, falta = null, ultimo = 0, pedido = 0, saida = 0, tituloFinal = false;
+
+  // O DOM muda no máximo uma vez por frame: há apps que leem centenas de PDFs por segundo
+  function pintar() {
+    pedido = 0;
+    el.dataset.estado = estado;
+    detalheEl.textContent = detalhe;
+    valorEl.textContent = valor;
+    if (estado === "indeterminado") el.removeAttribute("aria-valuenow");
+    else {
+      barra.style.width = `${x * 100}%`;
+      el.setAttribute("aria-valuenow", String(Math.floor(x * 100)));
+    }
+    const texto = estado === "ativo" ? [pct(x), detalhe].filter(Boolean).join(" · ") : detalhe;
+    if (texto) el.setAttribute("aria-valuetext", texto); else el.removeAttribute("aria-valuetext");
+  }
+  const agendar = () => { if (!pedido) pedido = requestAnimationFrame(pintar); };
+  const agora = () => { if (pedido) { cancelAnimationFrame(pedido); pedido = 0; } pintar(); };
+  // O título muda logo (o requestAnimationFrame pára com o separador em segundo plano)
+  const titulo = t => { if (document.title !== t) document.title = t; };
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && tituloFinal) { tituloFinal = false; titulo(tituloBase); }
+  });
+
+  return {
+    iniciar(texto = "") {
+      clearTimeout(saida);
+      el.classList.remove("a-sair");
+      if (el.hidden) barra.style.width = "0%"; // ainda escondida: não anima de volta ao zero
+      t0 = performance.now();
+      x = 0; base = null; falta = null; tituloFinal = false;
+      estado = "indeterminado"; detalhe = texto; valor = "";
+      agora();
+      el.hidden = false;
+    },
+    fase(texto) {
+      estado = "indeterminado"; detalhe = texto; valor = ""; base = null; falta = null;
+      titulo(tituloBase); // sem medida não há % para mostrar
+      agendar();
+    },
+    atualizar(novoX, texto) {
+      const t = performance.now();
+      x = Math.min(1, Math.max(0, novoX));
+      if (texto !== undefined) detalhe = texto;
+      if (estado !== "ativo" || base === null) { base = { t, x }; falta = null; }
+      estado = "ativo";
+      const passou = (t - base.t) / 1000, feito = x - base.x;
+      if (passou >= 1.5 && x >= 0.05 && feito > 0) {
+        const estimativa = passou * (1 - x) / feito;
+        // Média móvel, descontando o tempo desde a última estimativa: o número não salta
+        falta = falta === null ? estimativa : 0.6 * Math.max(0, falta - (t - ultimo) / 1000) + 0.4 * estimativa;
+        ultimo = t;
+      }
+      valor = falta !== null && falta >= 2 ? `${pct(x)} · ~${tempo(falta)}` : pct(x);
+      titulo(`${pct(x)} · ${tituloBase}`);
+      agendar();
+    },
+    concluir(ok = true, texto) {
+      estado = ok ? "ok" : "erro";
+      x = 1;
+      detalhe = texto ?? (ok ? `Concluído em ${tempo((performance.now() - t0) / 1000)}` : "Interrompido");
+      valor = ok ? "100\u00a0%" : "";
+      agora();
+      if (document.hidden) { titulo(`${ok ? "✓ Concluído" : "✗ Erro"} · ${tituloBase}`); tituloFinal = true; }
+      else titulo(tituloBase);
+      clearTimeout(saida);
+      saida = setTimeout(() => {
+        el.classList.add("a-sair");
+        saida = setTimeout(() => { el.hidden = true; el.classList.remove("a-sair"); }, 200);
+      }, 1500);
+    },
+  };
+}
 </script>
 
 <script>
@@ -914,12 +1038,14 @@ const Logica = (() => {
     $("estado-pdf").hidden = true;
     estado("Pronto");
     atualizarVista();
+    barraProgresso.iniciar(`A ler o PDF · ${tamanho(ficheiro.size)}`);
     let dados, folhas;
     try {
       dados = new Uint8Array(await ficheiro.arrayBuffer());
       folhas = await Logica.contarFolhas(dados);
     } catch (e) {
       if (minha !== leituras) return;
+      barraProgresso.concluir(false, "Não consegui ler o PDF");
       aLer = false;
       $("btn-separar").disabled = false;
       $("nome-pdf").textContent = "Nenhum PDF escolhido";
@@ -928,6 +1054,7 @@ const Logica = (() => {
       return;
     }
     if (minha !== leituras) return;
+    barraProgresso.concluir(true, folhas === null ? "PDF lido" : `PDF lido · ${folhas} folhas`);
     aLer = false;
     $("btn-separar").disabled = false;
     pdf = { nome: ficheiro.name, dados, folhas };
@@ -995,11 +1122,19 @@ const Logica = (() => {
     $("btn-separar").textContent = sim ? "A separar…" : "Separar";
     $("btn-pdf").disabled = sim;
     for (const r of radiosTipo()) r.disabled = sim;
-    $("progresso").hidden = !sim;
     atualizarVista();
   }
 
-  const progresso = x => { $("progresso").firstElementChild.style.width = `${x * 100}%`; };
+  const barraProgresso = criarProgresso($("progresso"));
+  const tamanho = b => (b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB`
+    : `${(b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace(".", ",")} MB`);
+  let tamanhoAtual = "";
+  const progresso = (x, d = {}) => {
+    if (d.fase === "abrir") barraProgresso.fase(`A abrir o PDF · ${tamanhoAtual}`);
+    else if (d.fase === "analisar") barraProgresso.atualizar(x, `Folha ${d.atual} de ${d.total}`);
+    else if (d.fase === "partes") barraProgresso.atualizar(x, `Parte ${d.atual} de ${d.total} · ${d.nome}`);
+    else barraProgresso.atualizar(x);
+  };
 
   $("btn-separar").addEventListener("click", async () => {
     if (ocupado || aLer) return;
@@ -1020,12 +1155,14 @@ const Logica = (() => {
     trabalho = null;
     const atual = pdf;
     let erro = null, avisos = [];
-    progresso(0);
+    tamanhoAtual = tamanho(atual.dados.byteLength);
     setOcupado(true);
+    barraProgresso.iniciar(`A abrir o PDF · ${tamanhoAtual}`);
     estado(`A separar ${atual.nome}…`, "ativo");
     estadoPdf("A separar…", "ativo");
     try {
       const res = await Logica.separar(atual.dados, atual.nome, { progresso, tipo });
+      barraProgresso.fase("A conferir as folhas com o original…");
       // As contagens são feitas aqui, com o pdf.js: o original e, com várias partes, cada PDF
       // acabado de gerar. É a conferência independente do motor: o original tem de ter as folhas
       // do plano, cada parte as suas, e todas juntas as do original.
@@ -1064,6 +1201,7 @@ const Logica = (() => {
       estadoPdf(`✗ ${erro}`, "erro");
     } finally {
       setOcupado(false);
+      barraProgresso.concluir(!erro && !!trabalho);
     }
 
     if (erro || !trabalho) {
