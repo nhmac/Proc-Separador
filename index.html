@@ -1270,7 +1270,7 @@ function criarProgresso(el, tituloBase = document.title) {
       el("div", { className: "campo" }, codigo, botao),
       el("div", { className: "dica", textContent: n > 1
         ? `Linha ${k + 1} de ${n} · ${folhas} · um Adicionar por linha`
-        : `${folhas} · cole no campo Inserir e carregue em Adicionar` }));
+        : `${folhas} · colar no campo Inserir e carregar em Adicionar` }));
   }
 
   const pillPapel = gaveta => {
@@ -1301,10 +1301,10 @@ function criarProgresso(el, tituloBase = document.title) {
           el("b", { textContent: `Parte ${parte.n} de ${plano.partes.length}` }),
           el("span", { className: "nota", textContent: `${plural(parte.total, "folha", "folhas")} · ${paginas} do original` })),
         passo("PDF", valor(botao, el("span", { className: "ficheiro", textContent: ficheiro.nome })),
-          "Abra no Acrobat e imprima inteiro (Páginas: Tudo)."));
+          "Abrir no Acrobat e imprimir inteiro (Páginas: Tudo)."));
     } else {
       cartao.append(passo("PDF", valor(el("b", { textContent: trabalho.nome })),
-        "Abra no Acrobat e imprima inteiro (Páginas: Tudo), num só trabalho."));
+        "Abrir no Acrobat e imprimir inteiro (Páginas: Tudo), num só trabalho."));
     }
     cartao.append(passo("Impressora", valor(
       el("span", { textContent: "Fonte de papel:" }), pillPapel(plano.base))));
