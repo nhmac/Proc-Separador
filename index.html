@@ -131,18 +131,34 @@
   #vista > * { flex: none; }
 
   .card { background: var(--card); border: 1px solid var(--borda); border-radius: 10px; }
-  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-  .stat { padding: 12px 16px; }
-  .stat b { display: block; font: 600 28px/1.25 var(--display); font-variant-numeric: tabular-nums; }
-  .stat span { color: var(--texto-sec); font-size: 13px; }
+  /* Resumo: o PDF, as contagens e a conferência num só bloco pequeno */
+  .resumo { padding: 14px 20px; display: grid; gap: 12px; }
+  #nome-trabalho { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; overflow-wrap: anywhere; }
+  #nome-trabalho b { font: 600 16px/1.3 var(--display); }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .stat { min-width: 0; padding: 0 16px; }
+  .stat:first-child { padding-left: 0; }
+  .stat + .stat { border-left: 1px solid var(--borda); }
+  .stat b { display: block; font: 600 24px/1.25 var(--display); font-variant-numeric: tabular-nums; }
+  .stat span { display: flex; align-items: center; gap: 6px; color: var(--texto-sec); font-size: 13px; }
+  /* O quadrado da cor do papel serve de legenda das pills dos passos */
+  .stat.etiqueta span::before, .stat.normal span::before {
+    content: ""; flex: none; width: 8px; height: 8px; border-radius: 2px; background: var(--accent-texto);
+  }
+  .stat.etiqueta span::before { background: var(--etiqueta-texto); }
   /* O papel autocolante leva o destaque mais forte: é o que custa dinheiro se for trocado */
-  .stat.etiqueta { background: var(--etiqueta-fundo); border-color: var(--etiqueta-borda); }
-  .stat.etiqueta b, .stat.etiqueta span { color: var(--etiqueta-texto); }
+  .stat.etiqueta b { color: var(--etiqueta-texto); }
+  .stat.normal b { color: var(--accent-texto); }
+  #linha-conferencia {
+    padding-top: 10px; border-top: 1px solid var(--borda);
+    font-size: 13px; color: var(--texto-sec); white-space: pre-wrap;
+  }
 
-  .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
-  .topo .info { min-width: 0; }
-  #nome-trabalho { font-weight: 600; overflow-wrap: anywhere; }
   .nota { font-size: 13px; color: var(--texto-sec); }
+  .banner {
+    padding: 10px 16px; border-radius: 10px; font-size: 13.5px;
+    background: var(--accent-suave); border: 1px solid #2c4a80;
+  }
 
   .pill {
     display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
@@ -150,37 +166,44 @@
     background: var(--accent-suave); color: var(--accent-texto);
   }
   .pill[data-papel="3"] { background: var(--etiqueta-fundo); color: var(--etiqueta-texto); }
+  .pill.neutro { background: var(--sub); color: var(--texto-sec); border: 1px solid var(--borda); letter-spacing: 0; }
 
-  /* Plano de cada trabalho: o perfil, a gaveta das inseridas e as linhas do campo Inserir.
-     Um cartão por parte; com várias partes, cada um abre com o cabeçalho e o seu download */
+  /* Plano de cada trabalho, em passos numerados pela ordem do driver: o PDF, a impressora, as
+     folhas de inserção e as linhas do campo Inserir. Um cartão por parte */
   .partes { display: flex; flex-direction: column; gap: 12px; }
-  .plano { padding: 4px 16px; }
-  .parte-topo {
-    display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap;
-    padding: 12px 0;
-  }
+  .plano { padding: 4px 20px; counter-reset: passo; }
+  .parte-topo { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding: 14px 0 12px; }
   .parte-topo b { font: 600 16px/1.3 var(--display); }
-  .parte-topo .btn-principal { width: auto; min-width: 200px; }
   .passo {
-    display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 16px; align-items: baseline;
-    padding: 12px 0; border-top: 1px solid var(--borda);
+    display: grid; grid-template-columns: 180px minmax(0, 1fr); column-gap: 16px; align-items: start;
+    padding: 14px 0; border-top: 1px solid var(--borda); counter-increment: passo;
   }
   .passo:first-child { border-top: 0; }
-  .rotulo { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-sec); }
-  .valor { display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; }
+  .rotulo {
+    display: flex; align-items: center; gap: 10px; min-height: 28px;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-sec);
+  }
+  .rotulo::before {
+    content: counter(passo); flex: none; display: grid; place-items: center; width: 24px; height: 24px;
+    border-radius: 50%; background: var(--sub); border: 1px solid var(--borda);
+    color: var(--texto); font-size: 12px; letter-spacing: 0;
+  }
+  .conteudo { display: grid; gap: 6px; min-width: 0; }
+  .valor { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; min-height: 28px; }
   .perfil-base { font: 600 20px/1.3 var(--display); }
-  .inserir { display: grid; gap: 10px; }
-  .inserir .sub { font-size: 13px; color: var(--texto-sec); }
-  .campo { display: flex; gap: 8px; align-items: stretch; margin-top: 2px; }
+  .ficheiro { font: 13px/1.4 var(--mono); color: var(--texto-sec); overflow-wrap: anywhere; }
+  .dica { font-size: 12.5px; color: var(--texto-sec); }
+  .valor .btn-principal { width: auto; min-width: 200px; }
+  .inserir { display: grid; gap: 14px; }
+  .linha-inserir { display: grid; gap: 6px; }
+  .campo { display: flex; gap: 8px; align-items: stretch; }
   .campo code {
-    flex: 1; min-width: 0; padding: 8px 10px; border-radius: 6px; user-select: all;
-    background: var(--sub); border: 1px solid var(--borda); font: 13px/22px var(--mono); overflow-wrap: anywhere;
+    flex: 1; min-width: 0; padding: 9px 12px; border-radius: 6px; user-select: all;
+    background: var(--sub); border: 1px solid var(--borda); font: 15px/24px var(--mono); overflow-wrap: anywhere;
   }
   .campo code span { white-space: nowrap; }
-  .campo .btn { width: auto; min-width: 116px; height: auto; min-height: 40px; }
-  .btn.copiado { color: var(--sucesso); border-color: var(--sucesso); }
-
-  #linha-conferencia { font-size: 13px; color: var(--texto-sec); white-space: pre-wrap; }
+  .campo .copiar { width: auto; min-width: 120px; height: 44px; align-self: flex-start; }
+  .copiar.copiado, .copiar.copiado:hover:not(:disabled) { background: var(--sucesso); }
 
   /* Avisos e perguntas: só para avisos e erros, nunca para sucesso */
   dialog {
@@ -207,11 +230,13 @@
     .app { grid-template-columns: minmax(0, 1fr); height: auto; }
     .sidebar { padding: 24px 16px; overflow: visible; }
     main { padding: 20px 16px; }
-    .passo { grid-template-columns: minmax(0, 1fr); row-gap: 6px; }
-    .stats { gap: 8px; }
-    .stat { padding: 10px 12px; }
-    .stat b { font-size: 22px; }
-    .parte-topo .btn-principal { width: 100%; }
+    .resumo, .plano { padding-left: 16px; padding-right: 16px; }
+    .passo { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
+    .stat { padding: 0 10px; }
+    .stat b { font-size: 20px; }
+    .valor .btn-principal { width: 100%; }
+    .campo { flex-direction: column; }
+    .campo .copiar { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -265,21 +290,20 @@
     <div class="vazio" id="vazio" hidden></div>
 
     <section id="vista" aria-label="Plano de impressão">
-      <div class="stats">
-        <div class="card stat"><b id="stat-total">0</b><span>Folhas no total</span></div>
-        <div class="card stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
-        <div class="card stat"><b id="stat-normal">0</b><span id="stat-normal-txt">Folhas A4-Normal</span></div>
+      <div class="card resumo">
+        <div id="nome-trabalho"></div>
+        <div class="stats">
+          <div class="stat"><b id="stat-total">0</b><span>Folhas no total</span></div>
+          <div class="stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
+          <div class="stat normal"><b id="stat-normal">0</b><span id="stat-normal-txt">Folhas A4-Normal</span></div>
+        </div>
+        <div id="linha-conferencia"></div>
       </div>
 
-      <div class="topo">
-        <div class="info">
-          <div id="nome-trabalho"></div>
-          <div class="nota" id="nota-trabalho"></div>
-        </div>
-      </div>
+      <!-- Só com várias partes -->
+      <div class="banner" id="nota-trabalho" hidden></div>
 
       <div class="partes" id="partes"></div>
-      <div id="linha-conferencia"></div>
     </section>
   </main>
 </div>
@@ -1064,12 +1088,14 @@ const Logica = (() => {
       if (i) codigo.append(",", el("wbr"));
       codigo.append(el("span", { textContent: t }));
     });
-    const botao = el("button", { className: "btn", type: "button", textContent: "Copiar" });
+    const botao = el("button", { className: "btn-principal azul copiar", type: "button", textContent: "Copiar" });
     botao.addEventListener("click", () => copiar(botao, codigo, linha));
     const folhas = plural(parte.folhasPorLinha[k], "folha", "folhas");
-    return el("div", {},
-      el("div", { className: "sub", textContent: n > 1 ? `Linha ${k + 1} de ${n} · ${folhas} · um Adicionar por linha` : folhas }),
-      el("div", { className: "campo" }, codigo, botao));
+    return el("div", { className: "linha-inserir" },
+      el("div", { className: "campo" }, codigo, botao),
+      el("div", { className: "dica", textContent: n > 1
+        ? `Linha ${k + 1} de ${n} · ${folhas} · um Adicionar por linha`
+        : `${folhas} · cole no campo Inserir e carregue em Adicionar` }));
   }
 
   const pillPapel = gaveta => {
@@ -1077,11 +1103,16 @@ const Logica = (() => {
     pill.dataset.papel = gaveta;
     return pill;
   };
-  const passo = (rotulo, valor) => el("div", { className: "passo" },
-    el("span", { className: "rotulo", textContent: rotulo }), valor);
+  // Um passo numerado (o número vem do contador do CSS): o rótulo à esquerda e, à direita, o
+  // conteúdo e, se houver, uma dica por baixo
+  const passo = (rotulo, conteudo, dica) => el("div", { className: "passo" },
+    el("span", { className: "rotulo", textContent: rotulo }),
+    el("div", { className: "conteudo" }, conteudo, ...(dica ? [el("div", { className: "dica", textContent: dica })] : [])));
+  const valor = (...filhos) => el("div", { className: "valor" }, ...filhos);
 
-  // O cartão de um trabalho de impressão: a impressora, a gaveta das inseridas e as linhas do
-  // Inserir, na numeração dessa parte. Com várias partes, abre com o cabeçalho e o download.
+  // O cartão de um trabalho de impressão, em passos pela ordem do driver: o PDF, a impressora, a
+  // gaveta das inseridas e as linhas do Inserir, na numeração dessa parte. Com várias partes, abre
+  // com o cabeçalho, e o download é o passo 1.
   function cartaoParte(parte, k) {
     const { plano, pdfs } = trabalho;
     const cartao = el("div", { className: "card plano" });
@@ -1090,24 +1121,28 @@ const Logica = (() => {
       const botao = el("button", { className: "btn-principal azul", type: "button", textContent: `Descarregar parte ${parte.n}` });
       botao.addEventListener("click", () => descarregar(ficheiro.blob, ficheiro.nome));
       const paginas = parte.de === parte.ate ? `página ${parte.de}` : `páginas ${parte.de}–${parte.ate}`;
-      cartao.append(el("div", { className: "parte-topo" },
-        el("div", {},
+      cartao.append(
+        el("div", { className: "parte-topo" },
           el("b", { textContent: `Parte ${parte.n} de ${plano.partes.length}` }),
-          el("span", { className: "nota", textContent: ` · ${plural(parte.total, "folha", "folhas")} · ${paginas} do original` })),
-        botao));
+          el("span", { className: "nota", textContent: `${plural(parte.total, "folha", "folhas")} · ${paginas} do original` })),
+        passo("PDF", valor(botao, el("span", { className: "ficheiro", textContent: ficheiro.nome })),
+          "Abra no Acrobat e imprima inteiro (Páginas: Tudo)."));
+    } else {
+      cartao.append(passo("PDF", valor(el("b", { textContent: trabalho.nome })),
+        "Abra no Acrobat e imprima inteiro (Páginas: Tudo), num só trabalho."));
     }
-    cartao.append(passo("Impressora", el("div", { className: "valor" },
+    cartao.append(passo("Impressora", valor(
       el("b", { className: "perfil-base", textContent: plano.perfilBase }), pillPapel(plano.base))));
-    const nInseridas = parte.paginasInseridas.length;
-    if (!nInseridas) {
-      cartao.append(passo("Folhas inseridas", el("div", { className: "valor" },
+    if (!parte.paginasInseridas.length) {
+      cartao.append(passo("Folhas de inserção", valor(
         `Nenhuma: todas as folhas são ${PAPEL[plano.base]}. Imprimir só com o perfil acima, sem Folhas de inserção.`)));
       return cartao;
     }
     cartao.append(
-      passo("Folhas inseridas", el("div", { className: "valor" },
+      passo("Folhas de inserção", valor(
         el("span", { textContent: `Fonte de papel: Gaveta ${plano.gavetaInseridas}` }), pillPapel(plano.gavetaInseridas),
-        el("span", { textContent: `Imprimir em: Somente na frente · ${plural(nInseridas, "folha", "folhas")}` }))),
+        el("span", { textContent: "Imprimir em: Somente na frente" })),
+        "Propriedades › Fonte de papel › Seleção do papel: Folhas de inserção › Configurações › Folhas inseridas"),
       passo("Inserir", el("div", { className: "inserir" }, ...parte.linhas.map((l, i) => linhaInserir(l, i, parte)))));
     return cartao;
   }
@@ -1124,13 +1159,15 @@ const Logica = (() => {
     const nCont = plano.continuacoes.length;
     $("stat-normal-txt").textContent = nCont
       ? `Folhas A4-Normal · ${plural(nCont, "continuação", "continuações")}` : "Folhas A4-Normal";
-    $("nome-trabalho").textContent = `${t.nome} · ${Logica.TIPOS[t.tipo]}`;
+    $("nome-trabalho").replaceChildren(el("b", { textContent: t.nome }),
+      el("span", { className: "pill neutro", textContent: Logica.TIPOS[t.tipo] }));
 
     // Um só trabalho (o original), ou várias partes: cada uma com o seu cartão e o seu download
+    $("nota-trabalho").hidden = nPartes === 1;
     $("nota-trabalho").textContent = nPartes > 1
       ? `Mais de ${Logica.LIMITE_INSERCOES} folhas de inserção: o trabalho foi partido em ${nPartes} partes. ` +
         "Descarregue-as e imprima-as pela ordem, cada uma inteira."
-      : "Imprima o PDF original inteiro (Páginas: Tudo), num só trabalho.";
+      : "";
     $("partes").replaceChildren(...plano.partes.map(cartaoParte));
 
     const { folhasOriginal: original, folhasPartes } = t;
