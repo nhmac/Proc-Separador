@@ -296,7 +296,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.7</div>
+      <div class="versao">Versão web 1.7.1</div>
     </div>
   </aside>
 
@@ -586,12 +586,6 @@ const Logica = (() => {
     const outroTipo = t => `\n\nConfirme o tipo de PDF: se for ${TIPOS[t]}, escolha esse tipo e separe de novo.`;
 
     if (tipo === "express") {
-      // Folhas de álbum (etiqueta em imagem) não podem passar pela regra Express
-      const comImagem = paginas(p => p.estado === "visivel" && p.imagemEtiqueta);
-      if (comImagem.length) {
-        throw new Error(`Escolheu ${TIPOS.express}, mas há folhas com a etiqueta de envio em imagem, ` +
-          `típica de ${TIPOS.album} (${frasePaginas(comImagem)}); nada foi escrito.` + outroTipo("album"));
-      }
       // Cada folha de etiqueta Express tem cabeçalho e rodapé; os dois têm de bater certo, senão
       // uma folha de etiqueta podia sair em A4-Normal (ou o contrário)
       const semRodape = paginas(p => p.estado === "visivel" && !p.rodapeExpress);
