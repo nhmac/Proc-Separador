@@ -296,7 +296,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.7.1</div>
+      <div class="versao">Versão web 1.7.2</div>
     </div>
   </aside>
 
@@ -470,7 +470,7 @@ const Logica = (() => {
       const xs = [m[4], m[0] + m[4], m[2] + m[4], m[0] + m[2] + m[4]];
       const ys = [m[5], m[1] + m[5], m[3] + m[5], m[1] + m[3] + m[5]];
       const x0 = Math.min(...xs), x1 = Math.max(...xs);
-      lista.push({ x0, width: x1 - x0, top: caixa.altura - Math.max(...ys) });
+      lista.push({ x0, width: x1 - x0, top: caixa.altura - Math.max(...ys), height: Math.max(...ys) - Math.min(...ys) });
     };
     let ctm = [1, 0, 0, 1, 0, 0];
     const pilha = [];
@@ -506,6 +506,11 @@ const Logica = (() => {
   // A etiqueta de envio: imagem grande no canto superior direito (logo + código de barras + Lote)
   const detectaEtiqueta = imgs => imgs.some(im => im.top < 250 && im.width > 100 && im.x0 > 250);
 
+  // Só a etiqueta de envio dos álbuns (medida: 284 × 195 pt). Serve para recusar um PDF de álbuns
+  // no modo Biscates. As imagens que aparecem no canto das folhas Biscates são bem mais pequenas
+  // (logótipo 97 × 29, carimbo "AGRUPADO" 118 × 32), e o detectaEtiqueta apanhava o carimbo.
+  const detectaEtiquetaAlbum = imgs => imgs.some(im => im.top < 250 && im.x0 > 250 && im.width > 200 && im.height > 120);
+
   // Devolve [estado, numero]: "visivel", "invisivel" (existe mas está fora da folha) ou "ausente"
   function numeroNoCabecalho(lista, caixa) {
     // Inteira dentro da folha. Só o top não chega: numa página rodada o cabeçalho escondido
@@ -522,8 +527,9 @@ const Logica = (() => {
     return invisivel ? ["invisivel", invisivel] : ["ausente", null];
   }
 
-  // Por página: {gaveta, encomenda, estado, imagemEtiqueta, rodapeExpress}, com a herança dos
-  // números já resolvida. imagemEtiqueta e rodapeExpress servem às verificações cruzadas do tipo.
+  // Por página: {gaveta, encomenda, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress}, com a
+  // herança dos números já resolvida. imagemEtiqueta, etiquetaAlbum e rodapeExpress servem às
+  // verificações cruzadas do tipo.
   async function analisarPaginas(pdf, caixas, progresso = () => {}, tipo = "album") {
     if (!TIPOS[tipo]) throw new Error(`Tipo de PDF desconhecido: ${tipo}`);
     const info = [];
@@ -533,10 +539,12 @@ const Logica = (() => {
       const ops = await pagina.getOperatorList({ annotationMode: pdfjsLib.AnnotationMode.DISABLE });
       const lista = palavras(conteudo, caixas[i].altura);
       const [estado, numero] = numeroNoCabecalho(lista, caixas[i]);
-      const imagemEtiqueta = detectaEtiqueta(imagens(ops, caixas[i]));
+      const imgs = imagens(ops, caixas[i]);
+      const imagemEtiqueta = detectaEtiqueta(imgs);
+      const etiquetaAlbum = detectaEtiquetaAlbum(imgs);
       const rodapeExpress = RE_RODAPE_EXPRESS.test(lista.map(p => p.text).join(" "));
       const gaveta = tipo === "express" ? (estado === "visivel" ? 3 : 1) : (imagemEtiqueta ? 3 : 1);
-      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, rodapeExpress });
+      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress });
       pagina.cleanup();
       progresso((i + 1) / pdf.numPages, { atual: i + 1, total: pdf.numPages });
     }
@@ -586,13 +594,15 @@ const Logica = (() => {
     const outroTipo = t => `\n\nConfirme o tipo de PDF: se for ${TIPOS[t]}, escolha esse tipo e separe de novo.`;
 
     if (tipo === "express") {
-      // Cada folha de etiqueta Express tem cabeçalho e rodapé; os dois têm de bater certo, senão
-      // uma folha de etiqueta podia sair em A4-Normal (ou o contrário)
-      const semRodape = paginas(p => p.estado === "visivel" && !p.rodapeExpress);
-      if (semRodape.length) {
-        throw new Error(`Escolheu ${TIPOS.express}, mas há folhas com o número de encomenda sem o ` +
-          `rodapé "DreambooksPro Express" (${frasePaginas(semRodape)}); nada foi escrito.` + outroTipo("album"));
+      // Um PDF de álbuns não pode passar pela regra Express: as folhas de álbum têm a etiqueta de
+      // envio numa imagem grande no canto. O rodapé "DreambooksPro Express" não serve para isto,
+      // porque há encomendas Biscates sem ele.
+      const comEtiquetaAlbum = paginas(p => p.estado === "visivel" && p.etiquetaAlbum);
+      if (comEtiquetaAlbum.length) {
+        throw new Error(`Escolheu ${TIPOS.express}, mas há folhas com a etiqueta de envio em imagem, ` +
+          `típica de ${TIPOS.album} (${frasePaginas(comEtiquetaAlbum)}); nada foi escrito.` + outroTipo("album"));
       }
+      // Uma folha com o rodapé Express e sem o número visível iria para A4-Normal sem ser continuação
       const semCabecalho = paginas(p => p.rodapeExpress && p.estado !== "visivel");
       if (semCabecalho.length) {
         throw new Error(`Há folhas com o rodapé "DreambooksPro Express" sem o número de encomenda ` +
