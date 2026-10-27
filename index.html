@@ -266,7 +266,7 @@
 <div class="app">
   <aside class="sidebar">
     <h1>Proc-Separador</h1>
-    <div class="subtitulo">Para imprimir Fotolivros, Álbuns Dreambooks, Biscates e Álbuns 00 </div>
+    <div class="subtitulo">Para imprimir Fotolivros, Álbuns Dreambooks, Biscates e Álbuns 00</div>
 
     <div class="secao" id="secao-tipo">Tipo de PDF</div>
     <div class="tipos" role="radiogroup" aria-labelledby="secao-tipo">
@@ -296,7 +296,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.7.2</div>
+      <div class="versao">Versão web 1.7.3</div>
     </div>
   </aside>
 
@@ -361,9 +361,12 @@ const Logica = (() => {
   //   fonte, logótipo pequeno). Cada encomenda tem sempre uma folha de etiqueta, a que tem o
   //   cabeçalho "Encomenda N_N" visível; tudo o resto (miniaturas, continuações) é A4-Normal.
   // As verificações cruzadas de verificarFormato recusam o PDF se não bater com o tipo escolhido.
-  // O nome mostrado vem só daqui (botões e mensagens). "Biscates" é provisório: para
-  // voltar ao nome original, mudar só o texto de express (e o subtítulo da página).
-  const TIPOS = { album: "Fotolivros / Álbuns", express: "Biscates" };
+  //   Serve também para os álbuns DreambooksPRO da pasta "00" (1 ou mais de 2 folhas), que têm
+  //   as mesmas folhas: a 1.ª folha de cada encomenda em etiqueta, o resto em normal.
+  // O nome mostrado vem só daqui (botões e mensagens): o texto no HTML é substituído por este.
+  // "Biscates" é provisório: para voltar ao nome original, mudar só o texto de express (e o
+  // subtítulo da página).
+  const TIPOS = { album: "Fotolivros / Álbuns", express: "Biscates e Álbuns 00" };
   const RE_RODAPE_EXPRESS = /DreambooksPro\s+Express/i;
 
   // Impressão num só trabalho: a Canon está instalada no Windows como uma impressora por
