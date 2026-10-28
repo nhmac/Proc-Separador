@@ -272,11 +272,11 @@
     <div class="tipos" role="radiogroup" aria-labelledby="secao-tipo">
       <label class="tipo">
         <input type="radio" name="tipo" value="album">
-        <span><b data-nome-tipo="album">Fotolivros / Álbuns</b><small>Etiqueta detetada pela imagem no canto da folha</small></span>
+        <span><b data-nome-tipo="album">Fotolivros / Álbuns Dreambooks</b></span>
       </label>
       <label class="tipo">
         <input type="radio" name="tipo" value="express">
-        <span><b data-nome-tipo="express">Biscates e Álbuns 00</b><small>1.ª folha de cada encomenda em etiqueta, o resto em normal</small></span>
+        <span><b data-nome-tipo="express">Biscates / Álbuns 00</b></span>
       </label>
     </div>
 
@@ -296,7 +296,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.7.3</div>
+      <div class="versao">Versão web 1.7.4</div>
     </div>
   </aside>
 
@@ -366,7 +366,7 @@ const Logica = (() => {
   // O nome mostrado vem só daqui (botões e mensagens): o texto no HTML é substituído por este.
   // "Biscates" é provisório: para voltar ao nome original, mudar só o texto de express (e o
   // subtítulo da página).
-  const TIPOS = { album: "Fotolivros / Álbuns", express: "Biscates e Álbuns 00" };
+  const TIPOS = { album: "Fotolivros / Álbuns Dreambooks", express: "Biscates / Álbuns 00" };
   const RE_RODAPE_EXPRESS = /DreambooksPro\s+Express/i;
 
   // Impressão num só trabalho: a Canon está instalada no Windows como uma impressora por
