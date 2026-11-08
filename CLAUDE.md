@@ -1,5 +1,12 @@
 # Separador de Papel (Proc-Separador)
 
+**Primeiro passo de cada sessão, antes de ler ou alterar código:** `git pull --ff-only`. O utilizador
+trabalha em dois PCs e no Claude Code na web, e o GitHub é a única fonte. Se o pull falhar (alterações
+locais por enviar, conflito, sem rede), parar e avisar o utilizador. Nunca forçar.
+
+**No fim**, se houver alterações, commit e push (publicar só quando o utilizador pedir): não deixar
+trabalho só neste PC.
+
 Ferramenta de posto de trabalho para o PDF de encomendas (Dreambooks/Fotoprix, o "binder"), que mistura folhas de dois papéis. Distingue página a página o papel de cada folha e prepara a impressão **pela ordem do PDF original**, para o operador não ter de mudar de papel à mão página a página.
 
 Na versão web (a que está em uso) imprime-se de uma só forma:
@@ -41,7 +48,7 @@ Desde 2026-09-27 a app usa-se no browser: https://nhmac.github.io/Proc-Separador
 
 Desde 2026-11-08 a pasta do projeto **é o repositório** `nhmac/Proc-Separador` (código-fonte no `main`) e o site é gerado pelo GitHub Actions. O utilizador trabalha em dois PCs e no Claude Code na web: o GitHub é a única fonte.
 
-- **Antes de mexer:** `git pull`.
+- **Antes de mexer:** `git pull --ff-only` (ver o primeiro passo, no topo).
 - Alterar só `web/separador.html` (e subir o "Versão web" do rodapé). Testar com `py build_pages.py` (gera `_site/`).
 - Publicar = commit ("Versão X: …") e `git push` para o `main`. O workflow "Publicar site" gera e publica em 1-2 minutos; confirmar com `gh run list` e com `curl` ao site.
 - Commits até à 1.7.4 são do site gerado (o histórico antigo, antes de o código entrar no repositório): o `index.html` desses commits está na raiz.
