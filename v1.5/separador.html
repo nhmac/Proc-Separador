@@ -36,7 +36,6 @@
     --sucesso-hover: #1a8550;
     --aviso: #e0a526;
     --erro: #e5484d;
-    --sucesso-texto: #5fd49a;
     --trilho: #2f3542;
     /* Papel autocolante: o destaque mais forte, é o que custa dinheiro se for trocado */
     --etiqueta-fundo: #3d2f0c;
@@ -124,27 +123,7 @@
 
   .barra { height: 6px; border-radius: 3px; background: var(--trilho); overflow: hidden; flex: none; }
   .barra > i { display: block; height: 100%; width: 0; border-radius: 3px; background: var(--accent); transition: width .15s; }
-  /* Progresso, igual nas três apps da linha (no Python é o ui.Progresso): a barra fina e, por
-     baixo, o que está a fazer à esquerda e a percentagem e o tempo que falta à direita */
-  /* min-width 0 e minmax: um nome de ficheiro comprido corta-se com reticências, não alarga a página */
-  .progresso { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 6px; margin-top: -4px; transition: opacity .2s; }
-  .progresso.a-sair { opacity: 0; }
-  .progresso .barra > i { background: var(--accent); transition: width .15s, background-color .2s; }
-  .progresso[data-estado="ok"] .barra > i { background: var(--sucesso); }
-  .progresso[data-estado="erro"] .barra > i { background: var(--erro); }
-  .progresso[data-estado="indeterminado"] .barra > i { width: 30% !important; animation: progresso-desliza 1.3s ease-in-out infinite; }
-  @keyframes progresso-desliza { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
-  .progresso-legenda {
-    display: flex; justify-content: space-between; gap: 16px; min-height: 18px;
-    font-size: 12.5px; line-height: 18px; color: var(--texto-sec); font-variant-numeric: tabular-nums;
-  }
-  .progresso-detalhe { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .progresso-valor { flex: none; white-space: nowrap; }
-  .progresso[data-estado="ok"] .progresso-legenda { color: var(--sucesso-texto); }
-  .progresso[data-estado="erro"] .progresso-legenda { color: var(--erro); }
-  @media (prefers-reduced-motion: reduce) {
-    .progresso[data-estado="indeterminado"] .barra > i { animation: none; width: 100% !important; opacity: .4; }
-  }
+  #progresso { margin-top: -4px; }
 
   .vazio { flex: 1; display: grid; place-items: center; padding: 48px 16px; text-align: center; color: var(--texto-sec); }
 
@@ -152,34 +131,21 @@
   #vista > * { flex: none; }
 
   .card { background: var(--card); border: 1px solid var(--borda); border-radius: 10px; }
-  /* Resumo: o PDF, as contagens e a conferência num só bloco pequeno */
-  .resumo { padding: 14px 20px; display: grid; gap: 12px; }
-  #nome-trabalho { display: flex; align-items: center; gap: 6px 10px; flex-wrap: wrap; overflow-wrap: anywhere; }
-  #nome-trabalho b { font: 600 16px/1.3 var(--display); }
-  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .stat { min-width: 0; padding: 0 16px; }
-  .stat:first-child { padding-left: 0; }
-  .stat + .stat { border-left: 1px solid var(--borda); }
-  .stat b { display: block; font: 600 24px/1.25 var(--display); font-variant-numeric: tabular-nums; }
-  .stat span { display: flex; align-items: center; gap: 6px; color: var(--texto-sec); font-size: 13px; }
-  /* O quadrado da cor do papel serve de legenda das pills dos passos */
-  .stat.etiqueta span::before, .stat.normal span::before {
-    content: ""; flex: none; width: 8px; height: 8px; border-radius: 2px; background: var(--accent-texto);
-  }
-  .stat.etiqueta span::before { background: var(--etiqueta-texto); }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .stat { padding: 12px 16px; }
+  .stat b { display: block; font: 600 28px/1.25 var(--display); font-variant-numeric: tabular-nums; }
+  .stat span { color: var(--texto-sec); font-size: 13px; }
   /* O papel autocolante leva o destaque mais forte: é o que custa dinheiro se for trocado */
-  .stat.etiqueta b { color: var(--etiqueta-texto); }
-  .stat.normal b { color: var(--accent-texto); }
-  #linha-conferencia {
-    padding-top: 10px; border-top: 1px solid var(--borda);
-    font-size: 13px; color: var(--texto-sec); white-space: pre-wrap;
-  }
+  .stat.etiqueta { background: var(--etiqueta-fundo); border-color: var(--etiqueta-borda); }
+  .stat.etiqueta b, .stat.etiqueta span { color: var(--etiqueta-texto); }
 
+  .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; }
+  .topo .info { min-width: 0; }
+  #nome-trabalho { font-weight: 600; overflow-wrap: anywhere; }
   .nota { font-size: 13px; color: var(--texto-sec); }
-  .banner {
-    padding: 10px 16px; border-radius: 10px; font-size: 13.5px;
-    background: var(--accent-suave); border: 1px solid #2c4a80;
-  }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acoes .btn, .acoes .btn-principal { width: auto; }
+  #btn-carimbado { min-width: 240px; }
 
   .pill {
     display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
@@ -187,43 +153,37 @@
     background: var(--accent-suave); color: var(--accent-texto);
   }
   .pill[data-papel="3"] { background: var(--etiqueta-fundo); color: var(--etiqueta-texto); }
-  .pill.neutro { background: var(--sub); color: var(--texto-sec); border: 1px solid var(--borda); letter-spacing: 0; }
 
-  /* Plano de cada trabalho, em passos numerados pela ordem do driver: o PDF, a impressora, as
-     folhas de inserção e as linhas do campo Inserir. Um cartão por parte */
+  /* Plano de cada trabalho: o perfil, a gaveta das inseridas e as linhas do campo Inserir.
+     Um cartão por parte; com várias partes, cada um abre com o cabeçalho e o seu download */
   .partes { display: flex; flex-direction: column; gap: 12px; }
-  .plano { padding: 4px 20px; counter-reset: passo; }
-  .parte-topo { display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; padding: 14px 0 12px; }
+  .plano { padding: 4px 16px; }
+  .parte-topo {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap;
+    padding: 12px 0;
+  }
   .parte-topo b { font: 600 16px/1.3 var(--display); }
+  .parte-topo .btn-principal { width: auto; min-width: 200px; }
   .passo {
-    display: grid; grid-template-columns: 180px minmax(0, 1fr); column-gap: 16px; align-items: start;
-    padding: 14px 0; border-top: 1px solid var(--borda); counter-increment: passo;
+    display: grid; grid-template-columns: 150px minmax(0, 1fr); column-gap: 16px; align-items: baseline;
+    padding: 12px 0; border-top: 1px solid var(--borda);
   }
   .passo:first-child { border-top: 0; }
-  .rotulo {
-    display: flex; align-items: center; gap: 10px; min-height: 28px;
-    font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-sec);
-  }
-  .rotulo::before {
-    content: counter(passo); flex: none; display: grid; place-items: center; width: 24px; height: 24px;
-    border-radius: 50%; background: var(--sub); border: 1px solid var(--borda);
-    color: var(--texto); font-size: 12px; letter-spacing: 0;
-  }
-  .conteudo { display: grid; gap: 6px; min-width: 0; }
-  .valor { display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap; min-height: 28px; }
-  .ficheiro { font: 13px/1.4 var(--mono); color: var(--texto-sec); overflow-wrap: anywhere; }
-  .dica { font-size: 12.5px; color: var(--texto-sec); }
-  .valor .btn-principal { width: auto; min-width: 200px; }
-  .inserir { display: grid; gap: 14px; }
-  .linha-inserir { display: grid; gap: 6px; }
-  .campo { display: flex; gap: 8px; align-items: stretch; }
+  .rotulo { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto-sec); }
+  .valor { display: flex; align-items: baseline; gap: 6px 12px; flex-wrap: wrap; }
+  .perfil-base { font: 600 20px/1.3 var(--display); }
+  .inserir { display: grid; gap: 10px; }
+  .inserir .sub { font-size: 13px; color: var(--texto-sec); }
+  .campo { display: flex; gap: 8px; align-items: stretch; margin-top: 2px; }
   .campo code {
-    flex: 1; min-width: 0; padding: 9px 12px; border-radius: 6px; user-select: all;
-    background: var(--sub); border: 1px solid var(--borda); font: 15px/24px var(--mono); overflow-wrap: anywhere;
+    flex: 1; min-width: 0; padding: 8px 10px; border-radius: 6px; user-select: all;
+    background: var(--sub); border: 1px solid var(--borda); font: 13px/22px var(--mono); overflow-wrap: anywhere;
   }
   .campo code span { white-space: nowrap; }
-  .campo .copiar { width: auto; min-width: 120px; height: 44px; align-self: flex-start; }
-  .copiar.copiado, .copiar.copiado:hover:not(:disabled) { background: var(--sucesso); }
+  .campo .btn { width: auto; min-width: 116px; height: auto; min-height: 40px; }
+  .btn.copiado { color: var(--sucesso); border-color: var(--sucesso); }
+
+  #linha-conferencia { font-size: 13px; color: var(--texto-sec); white-space: pre-wrap; }
 
   /* Avisos e perguntas: só para avisos e erros, nunca para sucesso */
   dialog {
@@ -250,13 +210,12 @@
     .app { grid-template-columns: minmax(0, 1fr); height: auto; }
     .sidebar { padding: 24px 16px; overflow: visible; }
     main { padding: 20px 16px; }
-    .resumo, .plano { padding-left: 16px; padding-right: 16px; }
-    .passo { grid-template-columns: minmax(0, 1fr); row-gap: 8px; }
-    .stat { padding: 0 10px; }
-    .stat b { font-size: 20px; }
-    .valor .btn-principal { width: 100%; }
-    .campo { flex-direction: column; }
-    .campo .copiar { width: 100%; }
+    .passo { grid-template-columns: minmax(0, 1fr); row-gap: 6px; }
+    .acoes, .acoes .btn, .acoes .btn-principal { width: 100%; }
+    .stats { gap: 8px; }
+    .stat { padding: 10px 12px; }
+    .stat b { font-size: 22px; }
+    #btn-carimbado, .parte-topo .btn-principal { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -266,17 +225,17 @@
 <div class="app">
   <aside class="sidebar">
     <h1>Proc-Separador</h1>
-    <div class="subtitulo">Para imprimir Fotolivros, Álbuns Dreambooks, Biscates e Álbuns 00</div>
+    <div class="subtitulo">Para imprimir Fotolivros, Álbuns Dreambooks e Biscates</div>
 
     <div class="secao" id="secao-tipo">Tipo de PDF</div>
     <div class="tipos" role="radiogroup" aria-labelledby="secao-tipo">
       <label class="tipo">
         <input type="radio" name="tipo" value="album">
-        <span><b data-nome-tipo="album">Fotolivros / Álbuns Dreambooks</b></span>
+        <span><b data-nome-tipo="album">Fotolivros / Álbuns</b><small>Etiqueta detetada pela imagem no canto da folha</small></span>
       </label>
       <label class="tipo">
         <input type="radio" name="tipo" value="express">
-        <span><b data-nome-tipo="express">Biscates / Álbuns 00</b></span>
+        <span><b data-nome-tipo="express">Biscates</b><small>1.ª folha de cada encomenda em etiqueta, o resto em normal</small></span>
       </label>
     </div>
 
@@ -296,7 +255,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.7.4</div>
+      <div class="versao">Versão web 1.5</div>
     </div>
   </aside>
 
@@ -305,28 +264,30 @@
       <h2>Impressão</h2>
       <div id="estado" role="status">Pronto</div>
     </div>
-    <div class="progresso" id="progresso" role="progressbar" aria-label="Progresso" aria-valuemin="0" aria-valuemax="100" hidden>
-      <div class="barra"><i></i></div>
-      <div class="progresso-legenda"><span class="progresso-detalhe"></span><span class="progresso-valor"></span></div>
-    </div>
+    <div class="barra" id="progresso" hidden><i></i></div>
 
     <div class="vazio" id="vazio" hidden></div>
 
     <section id="vista" aria-label="Plano de impressão">
-      <div class="card resumo">
-        <div id="nome-trabalho"></div>
-        <div class="stats">
-          <div class="stat"><b id="stat-total">0</b><span>Folhas no total</span></div>
-          <div class="stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
-          <div class="stat normal"><b id="stat-normal">0</b><span id="stat-normal-txt">Folhas A4-Normal</span></div>
-        </div>
-        <div id="linha-conferencia"></div>
+      <div class="stats">
+        <div class="card stat"><b id="stat-total">0</b><span>Folhas no total</span></div>
+        <div class="card stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
+        <div class="card stat"><b id="stat-normal">0</b><span id="stat-normal-txt">Folhas A4-Normal</span></div>
       </div>
 
-      <!-- Só com várias partes -->
-      <div class="banner" id="nota-trabalho" hidden></div>
+      <div class="topo">
+        <div class="info">
+          <div id="nome-trabalho"></div>
+          <div class="nota" id="nota-trabalho">Imprima o PDF carimbado inteiro, num só trabalho, seguindo o guia.</div>
+        </div>
+        <div class="acoes">
+          <button class="btn" id="btn-guia" type="button">Descarregar guia</button>
+          <button class="btn-principal azul" id="btn-carimbado" type="button">Descarregar PDF carimbado</button>
+        </div>
+      </div>
 
       <div class="partes" id="partes"></div>
+      <div id="linha-conferencia"></div>
     </section>
   </main>
 </div>
@@ -353,6 +314,7 @@ const Logica = (() => {
   // Nome de cada tipo de papel. Internamente continua a ser 1 (normal) e 3 (etiqueta),
   // os números das gavetas da impressora.
   const PAPEL = { 1: "A4-Normal", 3: "A4-Etiqueta" };
+  const NOME_GUIA = "00_guia_impressao.txt";
   const RE_NUMERO_ENCOMENDA = /^\p{Nd}+_\p{Nd}+$/u;
 
   // Tipo de PDF, escolhido à mão (nunca adivinhado). Decide como se reconhece a folha de etiqueta:
@@ -361,12 +323,9 @@ const Logica = (() => {
   //   fonte, logótipo pequeno). Cada encomenda tem sempre uma folha de etiqueta, a que tem o
   //   cabeçalho "Encomenda N_N" visível; tudo o resto (miniaturas, continuações) é A4-Normal.
   // As verificações cruzadas de verificarFormato recusam o PDF se não bater com o tipo escolhido.
-  //   Serve também para os álbuns DreambooksPRO da pasta "00" (1 ou mais de 2 folhas), que têm
-  //   as mesmas folhas: a 1.ª folha de cada encomenda em etiqueta, o resto em normal.
-  // O nome mostrado vem só daqui (botões e mensagens): o texto no HTML é substituído por este.
-  // "Biscates" é provisório: para voltar ao nome original, mudar só o texto de express (e o
-  // subtítulo da página).
-  const TIPOS = { album: "Fotolivros / Álbuns Dreambooks", express: "Biscates / Álbuns 00" };
+  // O nome mostrado vem só daqui (botões, mensagens e guia). "Biscates" é provisório: para
+  // voltar ao nome original, mudar só o texto de express (e o subtítulo da página).
+  const TIPOS = { album: "Fotolivros / Álbuns", express: "Biscates" };
   const RE_RODAPE_EXPRESS = /DreambooksPro\s+Express/i;
 
   // Impressão num só trabalho: a Canon está instalada no Windows como uma impressora por
@@ -375,7 +334,10 @@ const Logica = (() => {
   const LIMITE_CARACTERES = 300;        // por entrada do campo Inserir do driver (testados 344)
   const LIMITE_INSERCOES = 100;         // folhas de inserção por trabalho: o driver aceita 1-100 e
                                         // com 1-101 bloqueia o botão Adicionar
+  const PONTOS_VERIFICACAO = 3;         // primeiras e últimas mudanças de papel no guia
 
+  // Carimbo do número de encomenda, em pontos (ver _sobreposicao_numero no Python)
+  const CARIMBO_X = 20, CARIMBO_TAMANHO = 8, CARIMBO_ALTURA_CAIXA = 14, CARIMBO_BASE_DO_TOPO = 11;
   const TOLERANCIA = 3; // x_tolerance e y_tolerance do pdfplumber
 
   const NOMES_RESERVADOS = new Set(["CON", "PRN", "AUX", "NUL",
@@ -473,7 +435,7 @@ const Logica = (() => {
       const xs = [m[4], m[0] + m[4], m[2] + m[4], m[0] + m[2] + m[4]];
       const ys = [m[5], m[1] + m[5], m[3] + m[5], m[1] + m[3] + m[5]];
       const x0 = Math.min(...xs), x1 = Math.max(...xs);
-      lista.push({ x0, width: x1 - x0, top: caixa.altura - Math.max(...ys), height: Math.max(...ys) - Math.min(...ys) });
+      lista.push({ x0, width: x1 - x0, top: caixa.altura - Math.max(...ys) });
     };
     let ctm = [1, 0, 0, 1, 0, 0];
     const pilha = [];
@@ -509,11 +471,6 @@ const Logica = (() => {
   // A etiqueta de envio: imagem grande no canto superior direito (logo + código de barras + Lote)
   const detectaEtiqueta = imgs => imgs.some(im => im.top < 250 && im.width > 100 && im.x0 > 250);
 
-  // Só a etiqueta de envio dos álbuns (medida: 284 × 195 pt). Serve para recusar um PDF de álbuns
-  // no modo Biscates. As imagens que aparecem no canto das folhas Biscates são bem mais pequenas
-  // (logótipo 97 × 29, carimbo "AGRUPADO" 118 × 32), e o detectaEtiqueta apanhava o carimbo.
-  const detectaEtiquetaAlbum = imgs => imgs.some(im => im.top < 250 && im.x0 > 250 && im.width > 200 && im.height > 120);
-
   // Devolve [estado, numero]: "visivel", "invisivel" (existe mas está fora da folha) ou "ausente"
   function numeroNoCabecalho(lista, caixa) {
     // Inteira dentro da folha. Só o top não chega: numa página rodada o cabeçalho escondido
@@ -530,9 +487,8 @@ const Logica = (() => {
     return invisivel ? ["invisivel", invisivel] : ["ausente", null];
   }
 
-  // Por página: {gaveta, encomenda, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress}, com a
-  // herança dos números já resolvida. imagemEtiqueta, etiquetaAlbum e rodapeExpress servem às
-  // verificações cruzadas do tipo.
+  // Por página: {gaveta, encomenda, estado, imagemEtiqueta, rodapeExpress}, com a herança dos
+  // números já resolvida. imagemEtiqueta e rodapeExpress servem às verificações cruzadas do tipo.
   async function analisarPaginas(pdf, caixas, progresso = () => {}, tipo = "album") {
     if (!TIPOS[tipo]) throw new Error(`Tipo de PDF desconhecido: ${tipo}`);
     const info = [];
@@ -542,14 +498,12 @@ const Logica = (() => {
       const ops = await pagina.getOperatorList({ annotationMode: pdfjsLib.AnnotationMode.DISABLE });
       const lista = palavras(conteudo, caixas[i].altura);
       const [estado, numero] = numeroNoCabecalho(lista, caixas[i]);
-      const imgs = imagens(ops, caixas[i]);
-      const imagemEtiqueta = detectaEtiqueta(imgs);
-      const etiquetaAlbum = detectaEtiquetaAlbum(imgs);
+      const imagemEtiqueta = detectaEtiqueta(imagens(ops, caixas[i]));
       const rodapeExpress = RE_RODAPE_EXPRESS.test(lista.map(p => p.text).join(" "));
       const gaveta = tipo === "express" ? (estado === "visivel" ? 3 : 1) : (imagemEtiqueta ? 3 : 1);
-      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress });
+      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, rodapeExpress });
       pagina.cleanup();
-      progresso((i + 1) / pdf.numPages, { atual: i + 1, total: pdf.numPages });
+      progresso((i + 1) / pdf.numPages);
     }
     let atual = null;
     for (const p of info) {
@@ -597,15 +551,19 @@ const Logica = (() => {
     const outroTipo = t => `\n\nConfirme o tipo de PDF: se for ${TIPOS[t]}, escolha esse tipo e separe de novo.`;
 
     if (tipo === "express") {
-      // Um PDF de álbuns não pode passar pela regra Express: as folhas de álbum têm a etiqueta de
-      // envio numa imagem grande no canto. O rodapé "DreambooksPro Express" não serve para isto,
-      // porque há encomendas Biscates sem ele.
-      const comEtiquetaAlbum = paginas(p => p.estado === "visivel" && p.etiquetaAlbum);
-      if (comEtiquetaAlbum.length) {
+      // Folhas de álbum (etiqueta em imagem) não podem passar pela regra Express
+      const comImagem = paginas(p => p.estado === "visivel" && p.imagemEtiqueta);
+      if (comImagem.length) {
         throw new Error(`Escolheu ${TIPOS.express}, mas há folhas com a etiqueta de envio em imagem, ` +
-          `típica de ${TIPOS.album} (${frasePaginas(comEtiquetaAlbum)}); nada foi escrito.` + outroTipo("album"));
+          `típica de ${TIPOS.album} (${frasePaginas(comImagem)}); nada foi escrito.` + outroTipo("album"));
       }
-      // Uma folha com o rodapé Express e sem o número visível iria para A4-Normal sem ser continuação
+      // Cada folha de etiqueta Express tem cabeçalho e rodapé; os dois têm de bater certo, senão
+      // uma folha de etiqueta podia sair em A4-Normal (ou o contrário)
+      const semRodape = paginas(p => p.estado === "visivel" && !p.rodapeExpress);
+      if (semRodape.length) {
+        throw new Error(`Escolheu ${TIPOS.express}, mas há folhas com o número de encomenda sem o ` +
+          `rodapé "DreambooksPro Express" (${frasePaginas(semRodape)}); nada foi escrito.` + outroTipo("album"));
+      }
       const semCabecalho = paginas(p => p.rodapeExpress && p.estado !== "visivel");
       if (semCabecalho.length) {
         throw new Error(`Há folhas com o rodapé "DreambooksPro Express" sem o número de encomenda ` +
@@ -621,13 +579,6 @@ const Logica = (() => {
         `(${frasePaginas(semNumero)}). Cada etiqueta começa uma encomenda, e as ` +
         "folhas de índice seguintes ficariam com o número da anterior; nada foi escrito." +
         (info.some(p => p.rodapeExpress) ? outroTipo("express") : ""));
-    }
-    // Folhas de etiqueta Express (número visível e rodapé, sem imagem) num PDF de álbum iriam para
-    // A4-Normal sem erro: um PDF misto passaria com as etiquetas dos Biscates no papel errado
-    const etiquetasExpress = paginas(p => p.estado === "visivel" && p.rodapeExpress && !p.imagemEtiqueta);
-    if (etiquetasExpress.length) {
-      throw new Error(`Escolheu ${TIPOS.album}, mas há folhas de etiqueta "DreambooksPro Express" ` +
-        `(${frasePaginas(etiquetasExpress)}), que iriam para A4-Normal; nada foi escrito.` + outroTipo("express"));
     }
     // Um PDF Express sem miniaturas passaria a verificação acima com zero etiquetas
     if (!info.some(p => p.gaveta === 3) && info.some(p => p.rodapeExpress)) {
@@ -777,6 +728,112 @@ const Logica = (() => {
     };
   }
 
+  // O guia do trabalho único (00_guia_impressao.txt), com fim de linha CRLF. `nomes` são os PDFs
+  // carimbados, um por parte. Com uma só parte o texto é o de sempre; com várias, cada parte
+  // tem os seus passos, na numeração da parte e com a página do original ao lado.
+  function guiaImpressaoUnica(nomePdf, nomes, plano, info, tipo = "album") {
+    const { total, contagem, base, gavetaInseridas, partes, continuacoes } = plano;
+    const varias = partes.length > 1;
+    const folhas = (n, s, p) => `${n} ${n === 1 ? s : p}`;
+    const nomePapel = gaveta => (gaveta === 3 ? "etiqueta" : "normal");
+
+    const g = [`Guia de impressão — ${nomePdf}`, `Tipo de PDF: ${TIPOS[tipo]}`,
+      varias ? `Ficheiros a imprimir: ${partes.length}, pela ordem das partes`
+        : `Ficheiro a imprimir: ${nomes[0]} (${folhas(total, "página", "páginas")}, mesma ordem do original)`,
+      `Conferência: ${folhas(total, "folha", "folhas")} = ${contagem[3]} ${PAPEL[3]} + ${contagem[1]} ${PAPEL[1]}`];
+    if (continuacoes.length) {
+      g.push(" ".repeat("Conferência: ".length) + (continuacoes.length === 1
+        ? "(da qual 1 continuação, carimbada com o nº de encomenda)"
+        : `(das quais ${continuacoes.length} continuações, carimbadas com o nº de encomenda)`));
+    }
+    if (varias) {
+      for (const p of partes) {
+        g.push(`Parte ${p.n}: ${folhas(p.total, "folha", "folhas")} ` +
+          `(${p.de === p.ate ? `página ${p.de}` : `páginas ${p.de}-${p.ate}`} do original) · ` +
+          folhas(p.paginasInseridas.length, "folha de inserção", "folhas de inserção"));
+      }
+      g.push("", `O driver só aceita ${LIMITE_INSERCOES} folhas de inserção por trabalho: o PDF foi partido em ${partes.length} partes.`,
+        "Imprimir as partes pela ordem, cada uma inteira. Os números do campo Inserir são os de",
+        "cada parte, não os do original.");
+    }
+
+    for (const parte of partes) {
+      const nome = nomes[parte.n - 1];
+      const troco = info.slice(parte.de - 1, parte.ate);
+      const { linhas } = parte;
+      const nInseridas = parte.paginasInseridas.length;
+      const pad = n => String(n).padStart(String(parte.total).length);
+      // Com várias partes, a página do original ao lado do número da folha na parte
+      const noOriginal = n => (varias ? `  (página ${n + parte.de - 1} do original)` : "");
+
+      g.push("", varias ? `PARTE ${parte.n} de ${partes.length} — ${nome} (${folhas(parte.total, "folha", "folhas")})`
+        : nInseridas ? "IMPRESSÃO — um só trabalho" : "IMPRESSÃO — um só trabalho, sem folhas de inserção", "",
+        `1. Abrir ${nome} no Acrobat → Imprimir → Páginas: Tudo`, "",
+        `2. Impressora: ${PERFIL[base]}`, "");
+      if (!nInseridas) {
+        g.push(`3. Todas as folhas são ${PAPEL[base]}: não há folhas de inserção.`,
+          "   Em Propriedades, confirmar que a Seleção do papel não ficou em Folhas de inserção.", "",
+          "4. Imprimir");
+      } else {
+        g.push("3. Propriedades → Fonte de papel → Seleção do papel: Folhas de inserção",
+          "   → Configurações de folhas de inserção", "",
+          `4. Folhas inseridas | Fonte de papel: Gaveta ${gavetaInseridas} | Imprimir em: Somente na frente`, "");
+        if (linhas.length === 1) {
+          g.push(`5. Inserir (copiar a linha abaixo) → Adicionar → confirmar ${nInseridas} linhas na lista`,
+            `   ${linhas[0]}`);
+        } else {
+          g.push(`5. Inserir: ${linhas.length} linhas, uma de cada vez (copiar → Inserir → Adicionar)`);
+          linhas.forEach((l, k) => g.push(
+            `   Linha ${k + 1} de ${linhas.length} (${folhas(parte.folhasPorLinha[k], "folha", "folhas")}) → Adicionar`, `   ${l}`));
+          g.push(`   No fim, confirmar ${nInseridas} linhas na lista`);
+        }
+        g.push("", "6. OK → OK → Imprimir");
+      }
+
+      const daParte = continuacoes.filter(c => c.parte === parte.n);
+      g.push("", "CONTINUAÇÕES — saem logo a seguir à folha principal");
+      if (!daParte.length) g.push("   (nenhuma)");
+      for (const c of daParte) {
+        const f = c.paginaNaParte;
+        const carimbo = c.encomenda ? `(carimbo ${c.encomenda})` : "(sem carimbo: SEM NÚMERO)";
+        const onde = f > 1 ? `a seguir à folha ${pad(f - 1)}`
+          : parte.n > 1 ? `no início desta pilha, a seguir à última folha da parte ${parte.n - 1}` : "no início da pilha";
+        g.push(`   Folha ${pad(f)}  ${carimbo}  ${onde}` + noOriginal(f) +
+          (c.noSitio ? "" : "  ← CONFERIR"));
+      }
+
+      // Mudanças de papel: as primeiras e as últimas; e cada continuação
+      const mudancas = [];
+      for (let i = 1; i < troco.length; i++) if (troco[i].gaveta !== troco[i - 1].gaveta) mudancas.push(i);
+      const k = PONTOS_VERIFICACAO;
+      const escolhidas = mudancas.length <= 2 * k ? mudancas : [...mudancas.slice(0, k), ...mudancas.slice(-k)];
+      const pontos = [
+        ...escolhidas.map(i => ({ chave: i, ordem: 1,
+          texto: `Folha ${pad(i)} ${nomePapel(troco[i - 1].gaveta)} → ${i + 1} ${nomePapel(troco[i].gaveta)}` + noOriginal(i) })),
+        ...daParte.map(c => ({ chave: c.paginaNaParte, ordem: 0,
+          texto: `Folha ${pad(c.paginaNaParte)} continuação ${c.encomenda ? `(carimbo ${c.encomenda})` : "(SEM NÚMERO)"}` +
+            noOriginal(c.paginaNaParte) })),
+      ].sort((a, b) => a.chave - b.chave || a.ordem - b.ordem);
+      g.push("", "PONTOS DE VERIFICAÇÃO NA PILHA");
+      if (escolhidas.length < mudancas.length) {
+        g.push(`   (as ${k} primeiras e as ${k} últimas de ${mudancas.length} mudanças de papel, e cada continuação)`);
+      }
+      if (!pontos.length) g.push("   (sem mudanças de papel)");
+      for (const p of pontos) g.push(`   ${p.texto}`);
+
+      // Onde as pilhas se juntam: a última folha desta parte e a encomenda que abre a seguinte
+      if (parte.n < partes.length) {
+        const ultima = troco[troco.length - 1], primeira = info[parte.ate];
+        g.push("", `JUNÇÃO COM A PARTE ${parte.n + 1}`,
+          `   Esta pilha acaba na folha ${parte.total} (${nomePapel(ultima.gaveta)}, encomenda ${ultima.encomenda || "SEM NÚMERO"}).`,
+          `   A pilha da parte ${parte.n + 1} vem logo a seguir e começa na encomenda ${primeira.encomenda || "SEM NÚMERO"}.`);
+      }
+    }
+
+    if (plano.avisos.length) g.push("", ...plano.avisos);
+    return g.join("\r\n");
+  }
+
   // ------------------------------------------------------------ nomes
 
   // os.path.splitext(nome)[0]
@@ -796,39 +853,57 @@ const Logica = (() => {
   }
 
   const zeros = (n, largura) => String(n).padStart(largura, "0");
+  const umDecimal = v => Number(v.toFixed(1));
 
-  // ------------------------------------------------------------ PDFs das partes
+  // ------------------------------------------------------------ escrita (pypdf)
 
-  // Só quando o trabalho passa das 100 folhas de inserção: um PDF por parte, cópia tal e qual do
-  // troço do original (as linhas do Inserir de cada parte contam a partir da 1.ª folha da parte).
-  // Com uma só parte não sai PDF nenhum: imprime-se o original. Cada um é relido no fim: se as
-  // folhas de uma parte, ou a soma de todas, não baterem, não sai nada.
-  async function pdfsPartes(origem, info, nomePdf, partes, progresso = () => {}) {
-    if (partes.length < 2) return [];
-    const raiz = `${nomeSeguro(semExtensao(nomePdf))}_parte`;
+  // Carimba o número no topo da folha, sobre um retângulo branco (_sobreposicao_numero)
+  function carimbar(pagina, texto, fonte) {
+    const { x: esquerda, y: baixo, height } = pagina.getCropBox();
+    const topo = baixo + height;
+    const larguraTexto = texto.length * CARIMBO_TAMANHO * 0.6;
+    const x = esquerda + CARIMBO_X;
+    const caixaY = topo - CARIMBO_ALTURA_CAIXA;
+    const baseY = topo - CARIMBO_BASE_DO_TOPO;
+    pagina.drawRectangle({
+      x: umDecimal(x - 4), y: umDecimal(caixaY), width: umDecimal(larguraTexto + 8), height: CARIMBO_ALTURA_CAIXA,
+      color: PDFLib.rgb(1, 1, 1),
+    });
+    pagina.drawText(texto, { x: umDecimal(x), y: umDecimal(baseY), size: CARIMBO_TAMANHO, font: fonte, color: PDFLib.rgb(0, 0, 0) });
+  }
+
+  // Um PDF por parte do plano: cópia do troço do original, com as mesmas páginas pela mesma
+  // ordem; só as continuações levam o carimbo do número de encomenda. Cada um é relido no fim:
+  // se as folhas de uma parte, ou a soma de todas, não baterem, não sai nada.
+  async function pdfsCarimbados(origem, info, nomePdf, partes, progresso = () => {}) {
+    const raiz = `${nomeSeguro(semExtensao(nomePdf))}_carimbado`;
     // Com 10 partes ou mais, "10de12" ficaria antes de "2de12" na ordem dos nomes
     const largura = String(partes.length).length;
     const lista = [];
     for (const parte of partes) {
-      const nome = `${raiz}_${zeros(parte.n, largura)}de${partes.length}.pdf`;
-      const onde = { atual: parte.n, total: partes.length, nome };
-      progresso((parte.n - 1) / partes.length, onde);
       const indices = Array.from({ length: parte.total }, (_, j) => parte.de - 1 + j);
       const doc = await PDFLib.PDFDocument.create({ updateMetadata: false });
       for (const p of await doc.copyPages(origem, indices)) doc.addPage(p);
+      const aCarimbar = indices.flatMap((i, j) => (eOrfa(info[i]) && info[i].encomenda ? [j] : []));
+      if (aCarimbar.length) {
+        const fonte = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+        const paginas = doc.getPages();
+        for (const j of aCarimbar) carimbar(paginas[j], info[indices[j]].encomenda, fonte);
+      }
       const bytes = await doc.save();
+      const nome = partes.length === 1 ? `${raiz}.pdf` : `${raiz}_${zeros(parte.n, largura)}de${partes.length}.pdf`;
       const n = (await PDFLib.PDFDocument.load(bytes, { updateMetadata: false })).getPageCount();
       if (n !== parte.total) {
         throw new Error(`${nome} ficou com ${n} folhas em vez de ${parte.total}. ` +
           "Nada foi entregue: separe o PDF outra vez.");
       }
-      lista.push({ nome, bytes, folhas: n });
-      progresso(parte.n / partes.length, onde);
+      lista.push({ nome, bytes, carimbadas: aCarimbar.length, folhas: n });
+      progresso(parte.n / partes.length);
     }
     const soma = lista.reduce((s, c) => s + c.folhas, 0);
     if (soma !== origem.getPageCount() || soma !== info.length) {
-      throw new Error(`Os PDFs das partes ficaram com ${soma} folhas, mas o original tem ` +
-        `${origem.getPageCount()}. Nada foi entregue: separe o PDF outra vez.`);
+      throw new Error(`${partes.length === 1 ? "O PDF carimbado ficou" : "Os PDFs carimbados ficaram"} com ${soma} folhas, ` +
+        `mas o original tem ${origem.getPageCount()}. Nada foi entregue: separe o PDF outra vez.`);
     }
     return lista;
   }
@@ -845,13 +920,12 @@ const Logica = (() => {
     }
   }
 
-  // dados: Uint8Array do PDF; nomePdf: nome do ficheiro. Devolve {info, plano, pdfs:
-  // [{nome, bytes, folhas}] (um por parte, só com várias partes; vazio com uma), avisos,
-  // nPaginas, tipo}. tipo: chave de TIPOS, obrigatória (escolhida à mão na página).
+  // dados: Uint8Array do PDF; nomePdf: nome do ficheiro. Devolve {info, plano, carimbados:
+  // [{nome, bytes, carimbadas, folhas}] (um por parte do plano), guiaUnico: {nome, texto},
+  // avisos, nPaginas, tipo}. tipo: chave de TIPOS, obrigatória (escolhida à mão na página).
   async function separar(dados, nomePdf, { progresso = () => {}, tipo } = {}) {
     if (!TIPOS[tipo]) throw new Error("Escolha o tipo de PDF antes de separar.");
     let origem, pdf;
-    progresso(0, { fase: "abrir" });
     try {
       origem = await PDFLib.PDFDocument.load(dados, { updateMetadata: false });
       pdf = await abrirParaLeitura(dados);
@@ -864,17 +938,17 @@ const Logica = (() => {
         throw new Error("O pdf.js e o pdf-lib não leem o mesmo número de páginas; nada foi escrito.");
       }
       const caixas = paginasLib.map(caixaDe);
-      // A base é o papel com mais folhas, por isso as inserções são no máximo metade das folhas:
-      // até 2 × LIMITE_INSERCOES folhas sai sempre uma só parte e a análise é a barra toda. Acima
-      // disso pode haver partes, e a escrita leva cerca de 30 % do tempo (medido no triplicado).
-      const peso = pdf.numPages > 2 * LIMITE_INSERCOES ? 0.7 : 1;
-      const info = await analisarPaginas(pdf, caixas, (x, d) => progresso(peso * x, { fase: "analisar", ...d }), tipo);
+      // Análise: 70 % da barra; escrita: o resto
+      const info = await analisarPaginas(pdf, caixas, x => progresso(0.7 * x), tipo);
       verificarFormato(info, paginasLib.map(p => p.getRotation().angle), tipo);
       const plano = planoImpressao(info);
-      const pdfs = await pdfsPartes(origem, info, nomePdf, plano.partes,
-        (x, d) => progresso(peso + (1 - peso) * x, { fase: "partes", ...d }));
+      const carimbados = await pdfsCarimbados(origem, info, nomePdf, plano.partes, x => progresso(0.7 + 0.3 * x));
       progresso(1);
-      return { info, plano, pdfs, nPaginas: info.length, tipo, avisos: plano.avisos };
+      return {
+        info, plano, carimbados, nPaginas: info.length, tipo,
+        guiaUnico: { nome: NOME_GUIA, texto: guiaImpressaoUnica(nomePdf, carimbados.map(c => c.nome), plano, info, tipo) },
+        avisos: plano.avisos,
+      };
     } finally {
       pdf.destroy();
     }
@@ -884,103 +958,10 @@ const Logica = (() => {
     PAPEL, PERFIL, TIPOS, separar, contarFolhas, nomeSeguro, semExtensao,
     // expostas para os testes
     palavras, imagens, numeroNoCabecalho, detectaEtiqueta, analisarPaginas, caixaDe, abrirParaLeitura, descricaoPaginas,
-    verificarFormato, intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsPartes,
+    verificarFormato, intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsCarimbados, guiaImpressaoUnica,
     LIMITE_CARACTERES, LIMITE_INSERCOES,
   };
 })();
-</script>
-
-<script>
-// Barra de progresso da linha "Processamento", igual nas três apps (no Python é o ui.Progresso).
-//   iniciar(detalhe)     mostra-a, numa fase sem medida
-//   fase(detalhe)        fase sem medida (abrir um PDF, conferir): a barra desliza
-//   atualizar(x, detalhe) põe-na em x, de 0 a 1; sem detalhe fica o anterior
-//   concluir(ok, detalhe) verde (ou vermelha), e recolhe-a passados 1,5 s
-// O tempo que falta mede-se desde o início da fase com medida, e só aparece com 1,5 s e 5 % feitos.
-function criarProgresso(el, tituloBase = document.title) {
-  const barra = el.querySelector(".barra > i");
-  const detalheEl = el.querySelector(".progresso-detalhe");
-  const valorEl = el.querySelector(".progresso-valor");
-  const pct = x => `${Math.floor(x * 100)}\u00a0%`;
-  const tempo = s => {
-    if (s < 60) return `${Math.max(1, Math.round(s))} s`;
-    const r = Math.round(s / 5) * 5;
-    return r % 60 ? `${Math.floor(r / 60)} min ${r % 60} s` : `${r / 60} min`;
-  };
-  let estado = "indeterminado", x = 0, detalhe = "", valor = "";
-  let t0 = 0, base = null, falta = null, ultimo = 0, pedido = 0, saida = 0, tituloFinal = false;
-
-  // O DOM muda no máximo uma vez por frame: há apps que leem centenas de PDFs por segundo
-  function pintar() {
-    pedido = 0;
-    el.dataset.estado = estado;
-    detalheEl.textContent = detalhe;
-    valorEl.textContent = valor;
-    if (estado === "indeterminado") el.removeAttribute("aria-valuenow");
-    else {
-      barra.style.width = `${x * 100}%`;
-      el.setAttribute("aria-valuenow", String(Math.floor(x * 100)));
-    }
-    const texto = estado === "ativo" ? [pct(x), detalhe].filter(Boolean).join(" · ") : detalhe;
-    if (texto) el.setAttribute("aria-valuetext", texto); else el.removeAttribute("aria-valuetext");
-  }
-  const agendar = () => { if (!pedido) pedido = requestAnimationFrame(pintar); };
-  const agora = () => { if (pedido) { cancelAnimationFrame(pedido); pedido = 0; } pintar(); };
-  // O título muda logo (o requestAnimationFrame pára com o separador em segundo plano)
-  const titulo = t => { if (document.title !== t) document.title = t; };
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden && tituloFinal) { tituloFinal = false; titulo(tituloBase); }
-  });
-
-  return {
-    iniciar(texto = "") {
-      clearTimeout(saida);
-      el.classList.remove("a-sair");
-      if (el.hidden) barra.style.width = "0%"; // ainda escondida: não anima de volta ao zero
-      t0 = performance.now();
-      x = 0; base = null; falta = null; tituloFinal = false;
-      estado = "indeterminado"; detalhe = texto; valor = "";
-      agora();
-      el.hidden = false;
-    },
-    fase(texto) {
-      estado = "indeterminado"; detalhe = texto; valor = ""; base = null; falta = null;
-      titulo(tituloBase); // sem medida não há % para mostrar
-      agendar();
-    },
-    atualizar(novoX, texto) {
-      const t = performance.now();
-      x = Math.min(1, Math.max(0, novoX));
-      if (texto !== undefined) detalhe = texto;
-      if (estado !== "ativo" || base === null) { base = { t, x }; falta = null; }
-      estado = "ativo";
-      const passou = (t - base.t) / 1000, feito = x - base.x;
-      if (passou >= 1.5 && x >= 0.05 && feito > 0) {
-        const estimativa = passou * (1 - x) / feito;
-        // Média móvel, descontando o tempo desde a última estimativa: o número não salta
-        falta = falta === null ? estimativa : 0.6 * Math.max(0, falta - (t - ultimo) / 1000) + 0.4 * estimativa;
-        ultimo = t;
-      }
-      valor = falta !== null && falta >= 2 ? `${pct(x)} · ~${tempo(falta)}` : pct(x);
-      titulo(`${pct(x)} · ${tituloBase}`);
-      agendar();
-    },
-    concluir(ok = true, texto) {
-      estado = ok ? "ok" : "erro";
-      x = 1;
-      detalhe = texto ?? (ok ? `Concluído em ${tempo((performance.now() - t0) / 1000)}` : "Interrompido");
-      valor = ok ? "100\u00a0%" : "";
-      agora();
-      if (document.hidden) { titulo(`${ok ? "✓ Concluído" : "✗ Erro"} · ${tituloBase}`); tituloFinal = true; }
-      else titulo(tituloBase);
-      clearTimeout(saida);
-      saida = setTimeout(() => {
-        el.classList.add("a-sair");
-        saida = setTimeout(() => { el.hidden = true; el.classList.remove("a-sair"); }, 200);
-      }, 1500);
-    },
-  };
-}
 </script>
 
 <script>
@@ -993,12 +974,10 @@ function criarProgresso(el, tituloBase = document.title) {
   const { PAPEL } = Logica;
 
   let pdf = null;         // {nome, dados: Uint8Array, folhas}
-  // {nome, tipo, plano, pdfs: [{nome, blob}] (um por parte, só com várias), folhasPartes,
+  // {nome, plano, carimbados: [{nome, blob}] (um por parte), guia: {nome, blob}, folhasPartes,
   //  folhasOriginal}
   let trabalho = null;
   let ocupado = false;
-  let aLer = false;       // a ler o PDF acabado de escolher
-  let leituras = 0;       // conta as escolhas de PDF: uma leitura antiga que acabe tarde não conta
 
   // ---------------------------------------------------------------- pop-ups (só avisos e erros)
   function mensagem(texto, tipo = "aviso") {
@@ -1031,39 +1010,8 @@ function criarProgresso(el, tituloBase = document.title) {
       await mensagem(`Não é possível usar:\n\n${ficheiro.name}\n\n(não é um ficheiro PDF)`);
       return;
     }
-    // O PDF anterior e o seu plano saem já de cena: senão ficavam à vista as linhas do Inserir de
-    // outro PDF, e um Separar carregado durante a leitura separava o PDF anterior. O Separar fica
-    // desativado até acabar a leitura; só a última escolha conta.
-    const minha = ++leituras;
-    pdf = null;
-    trabalho = null;
-    aLer = true;
-    $("btn-separar").disabled = true;
-    $("chip").classList.remove("escolhido");
-    $("nome-pdf").textContent = ficheiro.name;
-    $("folhas-pdf").hidden = true;
-    $("estado-pdf").hidden = true;
-    estado("Pronto");
-    atualizarVista();
-    barraProgresso.iniciar(`A ler o PDF · ${tamanho(ficheiro.size)}`);
-    let dados, folhas;
-    try {
-      dados = new Uint8Array(await ficheiro.arrayBuffer());
-      folhas = await Logica.contarFolhas(dados);
-    } catch (e) {
-      if (minha !== leituras) return;
-      barraProgresso.concluir(false, "Não consegui ler o PDF");
-      aLer = false;
-      $("btn-separar").disabled = false;
-      $("nome-pdf").textContent = "Nenhum PDF escolhido";
-      atualizarVista();
-      await mensagem(`Não consegui ler:\n\n${ficheiro.name}\n\n${e.message || e}`, "erro");
-      return;
-    }
-    if (minha !== leituras) return;
-    barraProgresso.concluir(true, folhas === null ? "PDF lido" : `PDF lido · ${folhas} folhas`);
-    aLer = false;
-    $("btn-separar").disabled = false;
+    const dados = new Uint8Array(await ficheiro.arrayBuffer());
+    const folhas = await Logica.contarFolhas(dados);
     pdf = { nome: ficheiro.name, dados, folhas };
     $("chip").classList.add("escolhido");
     $("nome-pdf").textContent = pdf.nome;
@@ -1129,22 +1077,14 @@ function criarProgresso(el, tituloBase = document.title) {
     $("btn-separar").textContent = sim ? "A separar…" : "Separar";
     $("btn-pdf").disabled = sim;
     for (const r of radiosTipo()) r.disabled = sim;
+    $("progresso").hidden = !sim;
     atualizarVista();
   }
 
-  const barraProgresso = criarProgresso($("progresso"));
-  const tamanho = b => (b < 1048576 ? `${Math.max(1, Math.round(b / 1024))} KB`
-    : `${(b / 1048576).toFixed(b < 10485760 ? 1 : 0).replace(".", ",")} MB`);
-  let tamanhoAtual = "";
-  const progresso = (x, d = {}) => {
-    if (d.fase === "abrir") barraProgresso.fase(`A abrir o PDF · ${tamanhoAtual}`);
-    else if (d.fase === "analisar") barraProgresso.atualizar(x, `Folha ${d.atual} de ${d.total}`);
-    else if (d.fase === "partes") barraProgresso.atualizar(x, `Parte ${d.atual} de ${d.total} · ${d.nome}`);
-    else barraProgresso.atualizar(x);
-  };
+  const progresso = x => { $("progresso").firstElementChild.style.width = `${x * 100}%`; };
 
   $("btn-separar").addEventListener("click", async () => {
-    if (ocupado || aLer) return;
+    if (ocupado) return;
     const tipo = tipoEscolhido();
     if (!tipo) {
       document.querySelector(".tipos").classList.add("falta");
@@ -1162,42 +1102,35 @@ function criarProgresso(el, tituloBase = document.title) {
     trabalho = null;
     const atual = pdf;
     let erro = null, avisos = [];
-    tamanhoAtual = tamanho(atual.dados.byteLength);
+    progresso(0);
     setOcupado(true);
-    barraProgresso.iniciar(`A abrir o PDF · ${tamanhoAtual}`);
     estado(`A separar ${atual.nome}…`, "ativo");
     estadoPdf("A separar…", "ativo");
     try {
       const res = await Logica.separar(atual.dados, atual.nome, { progresso, tipo });
-      barraProgresso.fase("A conferir as folhas com o original…");
-      // As contagens são feitas aqui, com o pdf.js: o original e, com várias partes, cada PDF
-      // acabado de gerar. É a conferência independente do motor: o original tem de ter as folhas
-      // do plano, cada parte as suas, e todas juntas as do original.
+      // As contagens são feitas aqui, com o pdf.js, a partir dos PDFs: o original e cada um dos
+      // PDFs acabados de gerar. É a conferência independente do motor: cada parte tem de ter as
+      // folhas do plano, e todas juntas as do original.
       const folhasOriginal = await Logica.contarFolhas(atual.dados);
       const folhasPartes = [];
-      for (const c of res.pdfs) folhasPartes.push(await Logica.contarFolhas(c.bytes));
+      for (const c of res.carimbados) folhasPartes.push(await Logica.contarFolhas(c.bytes));
+      const folhasCarimbado = folhasPartes.includes(null) ? null : folhasPartes.reduce((s, n) => s + n, 0);
+      const parteErrada = res.plano.partes.find((p, k) => folhasPartes[k] !== p.total);
       const txt = n => (n === null ? "?" : String(n));
-      const total = res.plano.total;
-      let falha = null;
-      if (folhasOriginal === null || folhasOriginal !== total) {
-        falha = `O plano tem ${total} folhas, mas o original tem ${txt(folhasOriginal)}.`;
-      } else if (res.pdfs.length) {
-        const parteErrada = res.plano.partes.find((p, k) => folhasPartes[k] !== p.total);
-        const soma = folhasPartes.includes(null) ? null : folhasPartes.reduce((s, n) => s + n, 0);
-        if (res.pdfs.length !== res.plano.partes.length || parteErrada || soma !== folhasOriginal) {
-          falha = `Os PDFs das partes têm ${folhasPartes.map(txt).join(" + ")} folhas` +
-            (parteErrada ? ` (a parte ${parteErrada.n} devia ter ${parteErrada.total})` : "") +
-            `, e o original tem ${txt(folhasOriginal)}.`;
-        }
-      }
-      const contagem = `${total}/${txt(folhasOriginal)} folhas`;
-      if (falha) {
+      const contagem = `${txt(folhasCarimbado)}/${txt(folhasOriginal)} folhas`;
+      if (folhasOriginal === null || folhasCarimbado !== folhasOriginal || parteErrada) {
         estadoPdf(`✗ ${contagem} — não imprimir`, "erro");
-        erro = `${falha} Este PDF não passa para a impressão.`;
+        erro = res.plano.partes.length === 1
+          ? `O PDF carimbado tem ${txt(folhasCarimbado)} folhas, mas o original tem ` +
+            `${txt(folhasOriginal)}. Este PDF não passa para a impressão.`
+          : `Os PDFs carimbados têm ${folhasPartes.map(txt).join(" + ")} folhas` +
+            (parteErrada ? ` (a parte ${parteErrada.n} devia ter ${parteErrada.total})` : "") +
+            `, e o original tem ${txt(folhasOriginal)}. Este PDF não passa para a impressão.`;
       } else {
         trabalho = {
           nome: atual.nome, tipo: res.tipo, plano: res.plano, folhasPartes, folhasOriginal,
-          pdfs: res.pdfs.map(c => ({ nome: c.nome, blob: new Blob([c.bytes], { type: "application/pdf" }) })),
+          carimbados: res.carimbados.map(c => ({ nome: c.nome, blob: new Blob([c.bytes], { type: "application/pdf" }) })),
+          guia: { nome: res.guiaUnico.nome, blob: new Blob([res.guiaUnico.texto], { type: "text/plain;charset=utf-8" }) },
         };
         avisos = res.avisos;
         estadoPdf(`OK · ${contagem} ✓`, "ok");
@@ -1208,7 +1141,6 @@ function criarProgresso(el, tituloBase = document.title) {
       estadoPdf(`✗ ${erro}`, "erro");
     } finally {
       setOcupado(false);
-      barraProgresso.concluir(!erro && !!trabalho);
     }
 
     if (erro || !trabalho) {
@@ -1220,7 +1152,8 @@ function criarProgresso(el, tituloBase = document.title) {
     }
     mostrarTrabalho();
     const nPartes = trabalho.plano.partes.length;
-    estado(nPartes > 1 ? `Pronto a imprimir · descarregue as ${nPartes} partes` : "Pronto a imprimir", "ok");
+    estado(nPartes > 1 ? `Pronto a imprimir · descarregue as ${nPartes} partes e o guia`
+      : "Pronto a imprimir · descarregue o PDF carimbado e o guia", "ok");
     if (avisos.length) await mensagem(avisos.join("\n\n"));
   });
 
@@ -1229,7 +1162,6 @@ function criarProgresso(el, tituloBase = document.title) {
     $("vista").hidden = !trabalho;
     $("vazio").hidden = !!trabalho;
     $("vazio").textContent = ocupado ? "A separar o PDF…"
-      : aLer ? "A ler o PDF…"
       : pdf ? "Carregue em Separar para preparar a impressão."
       : "Escolha o PDF e carregue em Separar.";
   }
@@ -1270,14 +1202,12 @@ function criarProgresso(el, tituloBase = document.title) {
       if (i) codigo.append(",", el("wbr"));
       codigo.append(el("span", { textContent: t }));
     });
-    const botao = el("button", { className: "btn-principal azul copiar", type: "button", textContent: "Copiar" });
+    const botao = el("button", { className: "btn", type: "button", textContent: "Copiar" });
     botao.addEventListener("click", () => copiar(botao, codigo, linha));
     const folhas = plural(parte.folhasPorLinha[k], "folha", "folhas");
-    return el("div", { className: "linha-inserir" },
-      el("div", { className: "campo" }, codigo, botao),
-      el("div", { className: "dica", textContent: n > 1
-        ? `Linha ${k + 1} de ${n} · ${folhas} · um Adicionar por linha`
-        : `${folhas} · colar no campo Inserir e carregar em Adicionar` }));
+    return el("div", {},
+      el("div", { className: "sub", textContent: n > 1 ? `Linha ${k + 1} de ${n} · ${folhas} · um Adicionar por linha` : folhas }),
+      el("div", { className: "campo" }, codigo, botao));
   }
 
   const pillPapel = gaveta => {
@@ -1285,46 +1215,37 @@ function criarProgresso(el, tituloBase = document.title) {
     pill.dataset.papel = gaveta;
     return pill;
   };
-  // Um passo numerado (o número vem do contador do CSS): o rótulo à esquerda e, à direita, o
-  // conteúdo e, se houver, uma dica por baixo
-  const passo = (rotulo, conteudo, dica) => el("div", { className: "passo" },
-    el("span", { className: "rotulo", textContent: rotulo }),
-    el("div", { className: "conteudo" }, conteudo, ...(dica ? [el("div", { className: "dica", textContent: dica })] : [])));
-  const valor = (...filhos) => el("div", { className: "valor" }, ...filhos);
+  const passo = (rotulo, valor) => el("div", { className: "passo" },
+    el("span", { className: "rotulo", textContent: rotulo }), valor);
 
-  // O cartão de um trabalho de impressão, em passos pela ordem do driver: o PDF, a impressora, a
-  // gaveta das inseridas e as linhas do Inserir, na numeração dessa parte. Com várias partes, abre
-  // com o cabeçalho, e o download é o passo 1.
+  // O cartão de um trabalho de impressão: a impressora, a gaveta das inseridas e as linhas do
+  // Inserir, na numeração dessa parte. Com várias partes, abre com o cabeçalho e o download.
   function cartaoParte(parte, k) {
-    const { plano, pdfs } = trabalho;
+    const { plano, carimbados } = trabalho;
     const cartao = el("div", { className: "card plano" });
     if (plano.partes.length > 1) {
-      const ficheiro = pdfs[k];
+      const ficheiro = carimbados[k];
       const botao = el("button", { className: "btn-principal azul", type: "button", textContent: `Descarregar parte ${parte.n}` });
       botao.addEventListener("click", () => descarregar(ficheiro.blob, ficheiro.nome));
       const paginas = parte.de === parte.ate ? `página ${parte.de}` : `páginas ${parte.de}–${parte.ate}`;
-      cartao.append(
-        el("div", { className: "parte-topo" },
+      cartao.append(el("div", { className: "parte-topo" },
+        el("div", {},
           el("b", { textContent: `Parte ${parte.n} de ${plano.partes.length}` }),
-          el("span", { className: "nota", textContent: `${plural(parte.total, "folha", "folhas")} · ${paginas} do original` })),
-        passo("PDF", valor(botao, el("span", { className: "ficheiro", textContent: ficheiro.nome })),
-          "Abrir no Acrobat e imprimir inteiro (Páginas: Tudo)."));
-    } else {
-      cartao.append(passo("PDF", valor(el("b", { textContent: trabalho.nome })),
-        "Abrir no Acrobat e imprimir inteiro (Páginas: Tudo), num só trabalho."));
+          el("span", { className: "nota", textContent: ` · ${plural(parte.total, "folha", "folhas")} · ${paginas} do original` })),
+        botao));
     }
-    cartao.append(passo("Impressora", valor(
-      el("span", { textContent: "Fonte de papel:" }), pillPapel(plano.base))));
-    if (!parte.paginasInseridas.length) {
-      cartao.append(passo("Folhas de inserção", valor(
+    cartao.append(passo("Impressora", el("div", { className: "valor" },
+      el("b", { className: "perfil-base", textContent: plano.perfilBase }), pillPapel(plano.base))));
+    const nInseridas = parte.paginasInseridas.length;
+    if (!nInseridas) {
+      cartao.append(passo("Folhas inseridas", el("div", { className: "valor" },
         `Nenhuma: todas as folhas são ${PAPEL[plano.base]}. Imprimir só com o perfil acima, sem Folhas de inserção.`)));
       return cartao;
     }
     cartao.append(
-      passo("Folhas de inserção", valor(
-        el("span", { textContent: "Fonte de papel:" }), pillPapel(plano.gavetaInseridas),
-        el("span", { textContent: "Imprimir em: Somente na frente" })),
-        "Propriedades › Fonte de papel › Seleção do papel: Folhas de inserção › Configurações › Folhas inseridas"),
+      passo("Folhas inseridas", el("div", { className: "valor" },
+        el("span", { textContent: `Fonte de papel: Gaveta ${plano.gavetaInseridas}` }), pillPapel(plano.gavetaInseridas),
+        el("span", { textContent: `Imprimir em: Somente na frente · ${plural(nInseridas, "folha", "folhas")}` }))),
       passo("Inserir", el("div", { className: "inserir" }, ...parte.linhas.map((l, i) => linhaInserir(l, i, parte)))));
     return cartao;
   }
@@ -1341,24 +1262,22 @@ function criarProgresso(el, tituloBase = document.title) {
     const nCont = plano.continuacoes.length;
     $("stat-normal-txt").textContent = nCont
       ? `Folhas A4-Normal · ${plural(nCont, "continuação", "continuações")}` : "Folhas A4-Normal";
-    $("nome-trabalho").replaceChildren(el("b", { textContent: t.nome }),
-      el("span", { className: "pill neutro", textContent: Logica.TIPOS[t.tipo] }));
+    $("nome-trabalho").textContent = `${t.nome} · ${Logica.TIPOS[t.tipo]}`;
 
-    // Um só trabalho (o original), ou várias partes: cada uma com o seu cartão e o seu download
-    $("nota-trabalho").hidden = nPartes === 1;
+    // Um só trabalho, ou várias partes: cada uma com o seu cartão e o seu download
     $("nota-trabalho").textContent = nPartes > 1
-      ? `Mais de ${Logica.LIMITE_INSERCOES} folhas de inserção: o trabalho foi partido em ${nPartes} partes. ` +
-        "Descarregue-as e imprima-as pela ordem, cada uma inteira."
-      : "";
+      ? `Mais de ${Logica.LIMITE_INSERCOES} folhas de inserção: o PDF foi partido em ${nPartes} partes. ` +
+        "Imprima-as pela ordem, cada uma inteira, seguindo o guia."
+      : "Imprima o PDF carimbado inteiro, num só trabalho, seguindo o guia.";
+    $("btn-carimbado").hidden = nPartes > 1;
     $("partes").replaceChildren(...plano.partes.map(cartaoParte));
 
     const { folhasOriginal: original, folhasPartes } = t;
-    const conta = nPartes > 1 ? folhasPartes.reduce((s, n) => s + n, 0) : plano.total;
+    const carimbado = folhasPartes.reduce((s, n) => s + n, 0);
     $("linha-conferencia").textContent = `"${t.nome}" = ${original} folhas  |  ` +
-      (nPartes > 1 ? `Partes: ${folhasPartes.join(" + ")} = ${conta}`
-        : `Plano: ${plano.contagem[3]} ${PAPEL[3]} + ${plano.contagem[1]} ${PAPEL[1]} = ${conta}`) +
-      ` folhas ${original === conta ? "✓" : "✗"}`;
-    $("linha-conferencia").dataset.tipo = original === conta ? "idle" : "erro";
+      (nPartes > 1 ? `PDFs carimbados: ${folhasPartes.join(" + ")} = ${carimbado}` : `PDF carimbado: ${carimbado}`) +
+      ` folhas ${original === carimbado ? "✓" : "✗"}`;
+    $("linha-conferencia").dataset.tipo = original === carimbado ? "idle" : "erro";
     $("vista").scrollTop = 0;
     atualizarVista();
   }
@@ -1371,6 +1290,13 @@ function criarProgresso(el, tituloBase = document.title) {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
+
+  $("btn-carimbado").addEventListener("click", () => {
+    if (trabalho && trabalho.carimbados.length === 1) descarregar(trabalho.carimbados[0].blob, trabalho.carimbados[0].nome);
+  });
+  $("btn-guia").addEventListener("click", () => {
+    if (trabalho && trabalho.guia) descarregar(trabalho.guia.blob, trabalho.guia.nome);
+  });
 
   addEventListener("beforeunload", e => {
     if (ocupado) { e.preventDefault(); e.returnValue = ""; }
