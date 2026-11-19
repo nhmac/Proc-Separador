@@ -34,7 +34,7 @@ Tudo na raiz do projeto:
 | `separar_gavetas.py` | Motor Python: deteção, agrupamento, escrita dos blocos e do guia. Funciona sozinho por linha de comandos. |
 | `separar_gavetas_gui.py` | Janela Python (customtkinter). Só orquestra e mostra, não tem lógica de negócio. |
 | `processamento_ui.py` | Aspeto comum da linha de apps "Processamento" (cores `COR`, fontes Inter, componentes). **Cópia idêntica** em `Processamento_Batches/` (AutoBatch) e `Processamento_PDF Scanner/`: alterar nas três e subir o `VERSAO_UI`. |
-| `Inter/`, `icone.ico` | Fonte Inter (SIL OFL) e ícone, usados pelo site e pela versão Python. |
+| `Inter/`, `icone.ico` | Fonte Inter (SIL OFL) e ícone, usados pelo site e pela versão Python. O ícone (`icone.ico`, `web/icon-192.png`, `web/icon-512.png`) é o "p" da família em amarelo (`#dbd136`); desde a 1.8.1 (2026-11-19, a pedido do utilizador) o "p" é branco com sombra, como nas outras apps (antes era escuro). |
 | `requirements.txt`, `README.md` | Para recriar o `.venv` da versão Python. |
 | `binder-álbuns-amador.pdf`, `binder-offset-fotolivros.pdf` | Os dois PDFs de teste, o banco de provas de tudo. Desde 2026-09-30 o `binder-álbuns-amador.pdf` é um lote real de 168 páginas (o "Binder1.pdf" da especificação da 1.2); o de 101 páginas usado até à 1.1 foi substituído. |
 | `binder-álbuns-amador-x3.pdf` | O mesmo lote triplicado pelo utilizador (504 páginas, 123 inseridas): o banco de provas das partes, acima das 100 inserções. |
