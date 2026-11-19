@@ -5,18 +5,18 @@ Prepara a impressão do PDF de encomendas (o "binder"), que mistura folhas de do
 
 - **App:** https://nhmac.github.io/Proc-Separador/ (Chrome ou Edge; pode ser instalada como app)
 - **Repositório:** https://github.com/nhmac/Proc-Separador (código-fonte no `main`; o site é gerado e publicado pelo GitHub Actions)
-- **Versão atual:** web 1.7.4
+- **Versão atual:** web 1.8
 
 O PDF é lido no browser e não é enviado para lado nenhum.
 
 Fluxo (desde a 1.2; o modo antigo com ZIP e blocos saiu da web na 1.4):
 
-1. Escolher o **tipo de PDF**:
-   - **Fotolivros / Álbuns**: a etiqueta é detetada pela imagem no canto da folha;
-   - **Biscates e Álbuns 00**: folhas DreambooksPro Express e álbuns DreambooksPRO da pasta "00".
-     A 1.ª folha de cada encomenda vai em etiqueta, o resto em normal.
-2. Escolher o PDF e carregar em **Separar**. Se o PDF não bater certo com o tipo, é recusado e
-   nada é escrito.
+1. Escolher o PDF e carregar em **Separar**. Desde a 1.8 o tipo é detetado sozinho, folha a
+   folha, e o mesmo PDF pode misturar encomendas:
+   - **Dreambooks / Fotoprix** (Fotolivros, Álbuns): a etiqueta é detetada pela imagem no canto da folha;
+   - **DreambooksPro Express** (Biscates, Álbuns 00): a folha com o número de encomenda vai em
+     etiqueta, as continuações em normal.
+2. O que não se consegue classificar com segurança é recusado e nada é escrito.
 3. Imprimir o **PDF original inteiro** no Acrobat, num só trabalho, com o papel maioritário. As
    folhas do outro papel vão como **folhas de inserção** do driver da Canon: a página mostra a
    fonte de papel e as linhas para copiar para o campo **Inserir**.

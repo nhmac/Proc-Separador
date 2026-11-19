@@ -15,7 +15,7 @@ Na versão web (a que está em uso) imprime-se de uma só forma:
 
 Desde a **1.6** (2026-10-22) **não há carimbo nem guia** na web: a pedido do utilizador, que os considera obsoletos. Com as folhas de inserção cada continuação sai no sítio, por isso o carimbo deixou de ser preciso, e o guia nunca foi usado. Até 100 inserções a app não gera ficheiro nenhum. Ver "Decisões já tomadas".
 
-Desde a **1.5** (2026-10-22) o operador escolhe primeiro o **tipo de PDF**: **Fotolivros / Álbuns Dreambooks** (a regra de sempre, etiqueta detetada pela imagem) ou **Biscates / Álbuns 00** (folhas DreambooksPro Express, e desde a 1.7.3 também os álbuns DreambooksPRO da pasta "00", em que a etiqueta é a folha com o número de encomenda visível). Ver "O domínio" → "Tipo de PDF".
+Desde a **1.8** (2026-11-19) **o tipo de PDF é detetado sozinho**, folha a folha, e um PDF pode misturar os dois tipos (ver "O domínio" → "Deteção automática"). Da 1.5 à 1.7.4 o operador escolhia primeiro o **tipo de PDF**: **Fotolivros / Álbuns Dreambooks** (a regra de sempre, etiqueta detetada pela imagem) ou **Biscates / Álbuns 00** (folhas DreambooksPro Express, e desde a 1.7.3 também os álbuns DreambooksPRO da pasta "00", em que a etiqueta é a folha com o número de encomenda visível). Ver "O domínio" → "Tipo de PDF".
 
 O **modo antigo (ZIP)**, com o PDF partido em blocos por papel, foi **removido da web na 1.4** (2026-10-01), a pedido do utilizador. Continua a existir na versão Python e pode ser reposto a partir do git (ver "Restaurar o modo antigo").
 
@@ -66,8 +66,8 @@ Especificação original: o `makeover-lógica.md`, já apagado pelo utilizador; 
 
 Linguagem minimalista, igual à da versão Python: dark mode, Inter, sidebar à esquerda com o botão verde em baixo e poucos pop-ups (só avisos e erros; não há pop-up de sucesso).
 
-- **Sidebar:** título "Proc-Separador", subtítulo **"Para imprimir Fotolivros, Álbuns Dreambooks, Biscates e Álbuns 00"** (desde a 1.7.3, mudado pelo utilizador no GitHub; na 1.5 "… e Biscates"; antes "Para imprimir Fotolivros e Álbuns Dreambooks"), a secção **Tipo de PDF**, **Escolher PDF…** (ou arrastar um só PDF), chip com nome, folhas e estado (`OK · 168/168 folhas ✓`), nota de privacidade, botão **Separar** e "Versão web 1.7.4".
-- **Tipo de PDF (1.5):** dois cartões de rádio (`.tipos` / `.tipo`, `name="tipo"`), só com o nome, sem descrição (desde a 1.7.4, a pedido do utilizador; antes tinham "Etiqueta detetada pela imagem no canto da folha" e "1.ª folha de cada encomenda em etiqueta, o resto em normal"): **Fotolivros / Álbuns Dreambooks** (`album`; até à 1.7.3 "Fotolivros / Álbuns") e **Biscates / Álbuns 00** (`express`; na 1.7.3 "Biscates e Álbuns 00", até à 1.7.2 só "Biscates"). Os nomes vêm de `Logica.TIPOS` (atributo `data-nome-tipo`).
+- **Sidebar:** título "Proc-Separador", subtítulo **"Para imprimir Fotolivros, Álbuns Dreambooks, Biscates e Álbuns 00"** (desde a 1.7.3, mudado pelo utilizador no GitHub; na 1.5 "… e Biscates"; antes "Para imprimir Fotolivros e Álbuns Dreambooks"), a secção **Tipo de PDF** (só até à 1.7.4: saiu na 1.8, com a deteção automática), **Escolher PDF…** (ou arrastar um só PDF), chip com nome, folhas e estado (`OK · 168/168 folhas ✓`), nota de privacidade, botão **Separar** e "Versão web 1.7.4".
+- **Tipo de PDF (1.5 a 1.7.4; saiu na 1.8, com a deteção automática):** dois cartões de rádio (`.tipos` / `.tipo`, `name="tipo"`), só com o nome, sem descrição (desde a 1.7.4, a pedido do utilizador; antes tinham "Etiqueta detetada pela imagem no canto da folha" e "1.ª folha de cada encomenda em etiqueta, o resto em normal"): **Fotolivros / Álbuns Dreambooks** (`album`; até à 1.7.3 "Fotolivros / Álbuns") e **Biscates / Álbuns 00** (`express`; na 1.7.3 "Biscates e Álbuns 00", até à 1.7.2 só "Biscates"). Os nomes vêm de `Logica.TIPOS` (atributo `data-nome-tipo`).
   - **Sem valor por omissão**: Separar sem tipo dá o pop-up "Escolha primeiro o tipo de PDF: …" e marca o seletor (`.tipos.falta`, borda âmbar). O tipo é verificado antes do PDF;
   - mudar de tipo depois de separar deita fora o resultado ("Tipo mudado para … · carregue em Separar de novo");
   - os rádios ficam desativados durante a separação;
@@ -94,7 +94,7 @@ Linguagem minimalista, igual à da versão Python: dark mode, Inter, sidebar à 
 
 ### A lógica na web
 
-O `<script id="logica">` não mexe no DOM (para se poder testar à parte) e segue o `separar_gavetas.py` função a função **na análise** (`palavras`, `imagens`, `detectaEtiqueta`, `numeroNoCabecalho`, `analisarPaginas`, `verificarFormato`). **Uma alteração às regras de análise faz-se nos dois sítios** (exceto o tipo Biscates, que existe só na web). O modo de blocos existe só no Python desde a 1.4. `separar(dados, nomePdf, {progresso, tipo})` faz análise → `verificarFormato` → `planoImpressao` → `pdfsPartes` e devolve `{info, plano, pdfs, avisos, nPaginas, tipo}` (`pdfs` vazio com uma só parte); só usa o pdf.js e o pdf-lib. **Desde a 1.5 o `tipo` é obrigatório** (`"album"` ou `"express"`, as chaves de `TIPOS`): sem ele dá erro "Escolha o tipo de PDF antes de separar.". Os testes e scripts antigos que chamam `separar()` sem `tipo` têm de passar `{tipo: "album"}`.
+O `<script id="logica">` não mexe no DOM (para se poder testar à parte) e segue o `separar_gavetas.py` função a função **na análise** (`palavras`, `imagens`, `detectaEtiqueta`, `numeroNoCabecalho`, `analisarPaginas`, `verificarFormato`). **Uma alteração às regras de análise faz-se nos dois sítios** (exceto o tipo Biscates, que existe só na web). O modo de blocos existe só no Python desde a 1.4. `separar(dados, nomePdf, {progresso, tipo})` faz análise → `verificarFormato` → `planoImpressao` → `pdfsPartes` e devolve `{info, plano, pdfs, avisos, nPaginas, tipo}` (`pdfs` vazio com uma só parte); só usa o pdf.js e o pdf-lib. **Desde a 1.8 o `tipo` por omissão é `"auto"`** (deteção folha a folha, a única que a página usa); `"album"` e `"express"` (as chaves de `TIPOS`) continuam a dar a regra manual; outro valor dá erro. Da 1.5 à 1.7.4 o `tipo` era obrigatório: os testes e scripts antigos que chamam `separar()` sem `tipo` para ter a regra dos álbuns têm agora de passar `{tipo: "album"}`.
 
 O tipo (1.5) entra em:
 - `analisarPaginas(pdf, caixas, progresso, tipo = "album")`: além de `gaveta`/`encomenda`/`estado`, cada página traz `imagemEtiqueta` (o `detectaEtiqueta` de sempre), `etiquetaAlbum` (desde a 1.7.2: `detectaEtiquetaAlbum`, só a etiqueta grande dos álbuns, `width > 200` e `height > 120`; o `imagens()` passou a devolver também `height`) e `rodapeExpress` (`RE_RODAPE_EXPRESS`, `/DreambooksPro\s+Express/i`, no texto da página). Em `album`, `gaveta = imagemEtiqueta ? 3 : 1`; em `express`, `gaveta = estado === "visivel" ? 3 : 1`. Tipo desconhecido → erro;
@@ -206,9 +206,24 @@ O número de encomenda tem a forma `3452270_643175` e pode estar em três estado
 - `invisivel` — está no conteúdo do PDF mas posicionado acima do bordo superior, por isso nunca é impresso. **Este é o cerne do problema**: para quem olha para a folha, é tão anónima como as que não têm cabeçalho;
 - `ausente` — não há cabeçalho nenhum; herda o número da última folha anterior identificada.
 
+### Deteção automática (web 1.8)
+
+Desde a **1.8** (2026-11-19), a pedido do utilizador, **não há escolha de tipo na página**: o tipo é detetado folha a folha (`classificarAuto()`), e um PDF pode **misturar** encomendas Dreambooks / Fotoprix (etiqueta em imagem) e DreambooksPro Express no mesmo binder, para a app servir todos os processos. A página chama sempre `separar(…, {tipo: "auto"})` (o valor por omissão). Os dois tipos manuais continuam na lógica (`TIPOS`, `{tipo: "album"}` / `{tipo: "express"}`), para os testes e para repor o seletor se for preciso (está na 1.7.4, commit `7a53116`).
+
+- Marcas de cada página, lidas no `analisarPaginas`: `etiquetaAlbum` (a etiqueta de envio dos álbuns em imagem, 284 × 195), `modeloExpress` (`RE_MODELO_EXPRESS`: o rodapé "DreambooksPro Express" **ou** o "LFM Express Nº" do cabeçalho da folha de etiqueta, porque há Biscates sem o rodapé) e `modeloAlbum` (`modeloAlbumNo()`: "Método de Pagamento" **e** "Saída Estimada", com E maiúsculo, do modelo Dreambooks / Fotoprix; as folhas Express têm "Pagamento:" e "Saída estimada:"). Medido a 2026-11-19 em 421 folhas reais: `modeloAlbum` em todas as 56 folhas Dreambooks / Fotoprix com número visível (48 com etiqueta e 8 do segundo modelo, trazidas pelo utilizador) e em nenhuma das 365 Express; `modeloExpress` em todas as Express e em nenhuma Dreambooks.
+- PDF **sem nenhuma** folha Express → o PDF todo pela regra `album`; **sem nenhuma** folha Dreambooks (nem etiqueta de álbum em imagem nem `modeloAlbum`) → o PDF todo pela regra `express`. Nos dois casos o resultado é igual ao do tipo manual (verificado: plano igual ao da 1.7.4 nos troços puros do binder misto).
+- **Misto** (as duas famílias no PDF): folha com número visível → etiqueta de álbum em imagem: A4-Etiqueta; só `modeloExpress`: A4-Etiqueta; só `modeloAlbum` (o **segundo modelo de folha**, miniaturas de 75 pt em x = 20): a regra dos álbuns, A4-Normal; folha sem número visível → A4-Normal (continuação), com a família herdada da última folha com número visível (`familia`).
+- Recusas novas (`verificarFormato` com o tipo efetivo `misto` ou `indefinido`):
+  - misto, folha com número visível **sem nenhuma das marcas, ou com as dos dois modelos**: recusa (podia ser etiqueta Express ou A4-Normal). A mensagem sugere separar essas encomendas num PDF à parte;
+  - misto, continuação de álbum (família ≠ express) com etiqueta em imagem: a regra de sempre dos álbuns. Nas continuações Express a miniatura no canto é ignorada, como no tipo Express;
+  - rodapé Express sem número visível (Express e misto);
+  - nenhuma das duas marcas em todo o PDF (`indefinido`): "Não reconheço as folhas deste PDF".
+- `separar()` devolve o tipo **efetivo** (`album`, `express` ou `misto`) e `composicao` (`{album, express}`, folhas de cada família). A página mostra o tipo na pill (`nomeTipo()`: "Misto" no misto) e, por baixo das contagens, o `#linha-tipos` ("Dreambooks / Fotoprix: 48 folhas · DreambooksPro Express: 176 folhas", nomes em `FAMILIAS`).
+- Os Álbuns 00 (PDF "álbuns geral", 284 folhas) e os Biscates (111 folhas) do utilizador têm todos o rodapé e o "LFM Express". As folhas Express **sem rodapé** são raras; os dois exemplos do utilizador (`6524360_1499423_label.pdf` e `6521088_1493712_label.pdf`, 2026-11-19, "Tipo: A - Dreambooks") têm o "LFM Express Nº" no cabeçalho e passam: sozinhas, igual à 1.7.4 Biscates (3131); num misto com etiquetas Dreambooks e uma folha do segundo modelo, A4-Etiqueta com as continuações em A4-Normal. Uma folha Express sem rodapé **e** sem "LFM Express" daria `indefinido` (sozinha) ou ambígua (num misto): recusa, nunca papel errado.
+
 ### Tipo de PDF (web 1.5)
 
-Escolhido à mão pelo operador, nunca adivinhado. Decide como se reconhece a folha A4-Etiqueta:
+Da 1.5 à 1.7.4 escolhido à mão pelo operador; desde a 1.8, detetado (ver acima). Decide como se reconhece a folha A4-Etiqueta:
 
 - **Fotolivros / Álbuns Dreambooks** (`album`) — a regra de sempre, descrita acima (imagem da etiqueta no canto superior direito). Com este tipo, a 1.5 deu exatamente os mesmos PDFs e plano que a 1.4, e a 1.6 o mesmo plano que a 1.5.
 - **Biscates** (`express`) — folhas **DreambooksPro Express**. A etiqueta não é imagem (código de barras em fonte, logótipo pequeno), por isso o `detectaEtiqueta` não serve. Cada encomenda tem sempre uma folha de etiqueta, **a que tem o cabeçalho "Encomenda N_N" visível**, com o rodapé "DreambooksPro Express". Tudo o resto (páginas de miniaturas, continuações da tabela) é A4-Normal e, como não tem número visível, é continuação.
@@ -303,6 +318,15 @@ Binder1-x12.pdf   Biscates   372 pág: 264 E + 108 N -> 2 partes, sem avisos
                              parte 2: 29 folhas (p344-372), 8 inserções: 2,5-6,9,18,20,27-28
                              corte entre 6529601_1508920 (p343) e a etiqueta de 6531158_1511678 (p344)
 
+Deteção automática (desde a 1.8; o binder misto do utilizador, 2026-11-19, 224 pág)
+Binder1 misto  auto -> misto: 48 Dreambooks / Fotoprix (p1-48) + 176 DreambooksPro Express
+                             219 E + 5 N, uma só parte, base Gaveta 3, Inserir 57,59,77,89,91 (todas continuações Express)
+                             = o plano da 1.7.4 com album nas p1-48 e express nas p49-224; recusado nos dois tipos manuais
+troços puros (p1-48, p49-224) em auto: plano igual ao do tipo manual na 1.7.4
+biscates.pdf (111 pág) e álbuns geral (284 pág, 2 partes) do utilizador, em auto: plano igual ao do tipo Biscates / Álbuns 00 na 1.7.4
+8 folhas do segundo modelo Dreambooks (uma por PDF, 2026-11-19): sozinhas = album, 8 A4-Normal (igual à 1.7.4 Álbuns);
+                             num misto com etiquetas Dreambooks e Biscates: A4-Normal (a 1.ª versão da 1.8, sem modeloAlbum, recusava-o)
+
 Sem carimbo nem guia (desde a 1.6)
 nos seis PDFs acima: análise, plano e avisos iguais aos da 1.5
 uma só parte -> nenhum PDF; com partes, os PDFs juntos = original folha a folha (hash do conteúdo igual)
@@ -370,7 +394,7 @@ Linguagem **minimalista**, pedida pelo utilizador. O aspeto é o da linha "Proce
 - **Modo de um só trabalho na versão Python** — não fazer (decisão de 2026-09-30).
 - **Modo antigo (ZIP) na web** — **removido na 1.4** (2026-10-01), a pedido do utilizador, que o considera obsoleto; o restauro faz-se pelo git (tag `v1.3`, ver "Restaurar o modo antigo"). Foi removido antes de haver um lote real impresso em partes: se as partes falharem no driver, a alternativa no posto é repor a 1.3. Não repor sem pedido.
 - **Mais de 100 inserções** (2026-10-01) — partir em vários trabalhos, com corte sempre entre encomendas e partes cheias (123 → 100 + 23); um botão de download por parte. Desde a 1.6 os PDFs das partes saem sem carimbo e não há guia. Não voltar ao aviso da 1.2, nem equilibrar as partes. O corte pode cair entre dois itens da mesma encomenda (`3471981_672860` | `3471981_672861`): o utilizador confirmou que não há problema.
-- **Tipo de PDF** (1.5, 2026-10-22) — escolha manual e obrigatória, **sem valor por omissão** e sem deteção automática; as verificações cruzadas recusam o PDF se não bater com o tipo escolhido. Não pôr um tipo pré-selecionado nem adivinhar o tipo.
+- **Tipo de PDF** — na 1.5 (2026-10-22) escolha manual e obrigatória, sem valor por omissão. **Mudado na 1.8 (2026-11-19), a pedido do utilizador:** deteção automática folha a folha, sem seletor, com PDFs mistos; o que não se consegue classificar com segurança é recusado (parar com erro), nunca adivinhado.
 - **Carimbo e guia na web** — **removidos na 1.6** (2026-10-22), a pedido do utilizador. O carimbo só fazia sentido no modo de blocos, em que as continuações eram separadas e agrupadas à mão; com as folhas de inserção saem no sítio, e no posto a app já era usada sem o download do PDF carimbado. O guia nunca foi usado. Não repor sem pedido (estão na 1.5, commit `97677d1`).
   - **Até 100 inserções** imprime-se o **PDF original** inteiro (Páginas: Tudo): os números do Inserir são os do original. A app não gera ficheiro nenhum.
   - **Acima de 100** continua a haver **um PDF por parte**, cópia tal e qual do troço do original (sem carimbo), porque as linhas do Inserir estão na numeração de cada parte: o original inteiro com essas linhas poria as inserções nas folhas erradas. Foi a opção escolhida pelo utilizador por ser a única validada no driver. A alternativa sem PDFs (o original com Páginas `de`–`ate` de cada parte) fica por validar: não se sabe se, com um intervalo no Acrobat, o Inserir conta a partir do início do intervalo.
@@ -381,7 +405,7 @@ Nunca escrever nas pastas do utilizador durante os testes: usar o scratchpad da 
 
 ### Web (depois de mexer em `web/separador.html`)
 
-1. **Antes de mexer**, guardar uma referência: correr `Logica.separar` (com `{tipo: "album"}`) nos três binders e no `v1.5/Binder2.pdf`, e com `{tipo: "express"}` no `v1.5/Binder1.pdf`, e gravar o `plano`, os `avisos` e os PDFs das partes. Em alternativa, comparar na mesma página com a lógica publicada (ver o último ponto dos unitários). Para ter um Biscates acima de 100 inserções, gerar o `Binder1-x12.pdf` no scratchpad (ver os resultados de referência).
+1. **Antes de mexer**, guardar uma referência: correr `Logica.separar` sem tipo (auto) no binder misto da 1.8 e nos outros, e (com `{tipo: "album"}`) nos três binders e no `v1.5/Binder2.pdf`, e com `{tipo: "express"}` no `v1.5/Binder1.pdf`, e gravar o `plano`, os `avisos` e os PDFs das partes. Em alternativa, comparar na mesma página com a lógica publicada (ver o último ponto dos unitários). Para ter um Biscates acima de 100 inserções, gerar o `Binder1-x12.pdf` no scratchpad (ver os resultados de referência).
 2. Correr `py build_pages.py` e testar o **`_site/index.html`**:
    - servir a pasta do projeto com um `http.createServer` do Node (o pdf.js não carrega o worker em `file://`);
    - abrir o Brave com `puppeteer-core` (`executablePath` do Brave, `headless: true`) e **um `userDataDir` temporário no scratchpad**, que impede o service worker de ficar com versões antigas;
@@ -407,8 +431,8 @@ Nunca escrever nas pastas do utilizador durante os testes: usar o scratchpad da 
    - o corte fica num início de encomenda;
    - nos álbuns, `analisar_paginas()` do Python dá o mesmo papel e estado que a web.
 6. **Interface:**
-   - `uploadFile` no `#input-pdf`, **esperar pelo `#chip.escolhido`** (o `definirPdf` lê o PDF de forma assíncrona; clicar antes dá "Escolha primeiro o PDF."), escolher o tipo (`input[value="album"]` / `input[value="express"]`) e clicar em Separar;
-   - Separar sem tipo → pop-up e `.tipos.falta`; mudar de tipo depois de separar → resultado deitado fora; o tipo no `#nome-trabalho`;
+   - `uploadFile` no `#input-pdf`, **esperar pelo `#chip.escolhido`** (o `definirPdf` lê o PDF de forma assíncrona; clicar antes dá "Escolha primeiro o PDF.") e clicar em Separar (desde a 1.8 não há tipo a escolher);
+   - o tipo detetado na pill do `#nome-trabalho` e a composição no `#linha-tipos`;
    - com uma só parte: nenhum botão de download, os passos 1-4, o banner escondido, o estado "Pronto a imprimir" e a linha `Plano: … ✓`;
    - para ver a classificação de um PDF novo, uma folha de contacto com as miniaturas das páginas (pdf.js num canvas) com a borda da cor do papel ajuda muito;
    - Copiar, com `overridePermissions` de clipboard e leitura com `navigator.clipboard.readText()`;

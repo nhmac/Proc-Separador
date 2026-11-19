@@ -63,20 +63,6 @@
   }
   .btn:hover:not(:disabled) { background: var(--card-hover); }
   .btn:disabled { cursor: default; opacity: .55; }
-  /* Tipo de PDF: escolha manual e obrigatória, sem valor por omissão */
-  .tipos { display: grid; gap: 8px; }
-  .tipo {
-    display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; cursor: pointer;
-    background: var(--card); border: 1px solid var(--borda); transition: background .15s, border-color .15s;
-  }
-  .tipo:hover { background: var(--card-hover); }
-  .tipo input { margin: 3px 0 0; accent-color: var(--accent); flex: none; }
-  .tipo span { display: grid; gap: 2px; min-width: 0; }
-  .tipo b { font-weight: 600; }
-  .tipo small { font-size: 12.5px; color: var(--texto-sec); }
-  .tipo:has(input:checked) { border-color: var(--accent); background: var(--accent-suave); }
-  .tipo:has(input:disabled) { cursor: default; opacity: .55; }
-  .tipos.falta .tipo { border-color: var(--aviso); }
   .chip { margin-top: 10px; background: var(--sub); border-radius: 8px; padding: 8px 12px; overflow-wrap: anywhere; }
   .chip .nome { color: var(--texto-sec); }
   .chip.escolhido .nome { color: var(--texto); }
@@ -153,6 +139,9 @@
   /* O papel autocolante leva o destaque mais forte: é o que custa dinheiro se for trocado */
   .stat.etiqueta b { color: var(--etiqueta-texto); }
   .stat.normal b { color: var(--accent-texto); }
+  /* O que a deteção automática do tipo encontrou (1.8) */
+  #linha-tipos { font-size: 13px; color: var(--texto-sec); }
+  #linha-tipos:empty { display: none; }
   #linha-conferencia {
     padding-top: 10px; border-top: 1px solid var(--borda);
     font-size: 13px; color: var(--texto-sec); white-space: pre-wrap;
@@ -249,18 +238,6 @@
     <h1>Proc-Separador</h1>
     <div class="subtitulo">Para imprimir Fotolivros, Álbuns Dreambooks, Biscates e Álbuns 00</div>
 
-    <div class="secao" id="secao-tipo">Tipo de PDF</div>
-    <div class="tipos" role="radiogroup" aria-labelledby="secao-tipo">
-      <label class="tipo">
-        <input type="radio" name="tipo" value="album">
-        <span><b data-nome-tipo="album">Fotolivros / Álbuns Dreambooks</b></span>
-      </label>
-      <label class="tipo">
-        <input type="radio" name="tipo" value="express">
-        <span><b data-nome-tipo="express">Biscates / Álbuns 00</b></span>
-      </label>
-    </div>
-
     <div class="secao">PDF</div>
     <button class="btn" id="btn-pdf" type="button">Escolher PDF…</button>
     <input id="input-pdf" type="file" accept=".pdf,application/pdf" hidden>
@@ -277,7 +254,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.7.4</div>
+      <div class="versao">Versão web 1.8</div>
     </div>
   </aside>
 
@@ -301,6 +278,7 @@
           <div class="stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
           <div class="stat normal"><b id="stat-normal">0</b><span id="stat-normal-txt">Folhas A4-Normal</span></div>
         </div>
+        <div id="linha-tipos"></div>
         <div id="linha-conferencia"></div>
       </div>
 
@@ -336,7 +314,9 @@ const Logica = (() => {
   const PAPEL = { 1: "A4-Normal", 3: "A4-Etiqueta" };
   const RE_NUMERO_ENCOMENDA = /^\p{Nd}+_\p{Nd}+$/u;
 
-  // Tipo de PDF, escolhido à mão (nunca adivinhado). Decide como se reconhece a folha de etiqueta:
+  // Tipo de PDF. Desde a 1.8 é detetado sozinho ("auto", ver classificarAuto), página a página, e
+  // um PDF pode misturar os dois tipos. Os dois tipos manuais continuam aqui (para os testes e
+  // para os repor na página, se for preciso). Decide como se reconhece a folha de etiqueta:
   // - album: imagem da etiqueta de envio no canto superior direito (como sempre);
   // - express: folhas DreambooksPro Express, em que a etiqueta não é imagem (código de barras em
   //   fonte, logótipo pequeno). Cada encomenda tem sempre uma folha de etiqueta, a que tem o
@@ -348,7 +328,20 @@ const Logica = (() => {
   // "Biscates" é provisório: para voltar ao nome original, mudar só o texto de express (e o
   // subtítulo da página).
   const TIPOS = { album: "Fotolivros / Álbuns Dreambooks", express: "Biscates / Álbuns 00" };
+  // O resultado da deteção automática: um dos dois tipos acima, ou os dois no mesmo PDF
+  const MISTO = "misto";
+  const NOME_MISTO = "Misto";
+  const nomeTipo = t => (t === MISTO ? NOME_MISTO : TIPOS[t]);
+  // Família de cada folha, para o resumo: Dreambooks e Fotoprix têm a etiqueta em imagem
+  const FAMILIAS = { album: "Dreambooks / Fotoprix", express: "DreambooksPro Express" };
   const RE_RODAPE_EXPRESS = /DreambooksPro\s+Express/i;
+  // Marca do modelo Express na folha de etiqueta: o rodapé ou o "LFM Express Nº" do cabeçalho
+  // (há encomendas Biscates sem o rodapé)
+  const RE_MODELO_EXPRESS = /DreambooksPro\s+Express|LFM\s+Express/i;
+  // Marca do modelo Dreambooks / Fotoprix, nas folhas com etiqueta e no segundo modelo de folha
+  // (A4-Normal com número visível, miniaturas de 75 pt): "Método de Pagamento" e "Saída Estimada".
+  // As folhas Express têm "Pagamento:" e "Saída estimada:". Medido a 2026-11-19 em 421 folhas reais.
+  const modeloAlbumNo = texto => /M[ée]todo\s+de\s+Pagamento/.test(texto) && /Sa[íi]da\s+Estimada/.test(texto);
 
   // Impressão num só trabalho: a Canon está instalada no Windows como uma impressora por
   // perfil. O perfil base leva o papel maioritário; o outro entra como folhas de inserção.
@@ -515,7 +508,7 @@ const Logica = (() => {
   // herança dos números já resolvida. imagemEtiqueta, etiquetaAlbum e rodapeExpress servem às
   // verificações cruzadas do tipo.
   async function analisarPaginas(pdf, caixas, progresso = () => {}, tipo = "album") {
-    if (!TIPOS[tipo]) throw new Error(`Tipo de PDF desconhecido: ${tipo}`);
+    if (!TIPOS[tipo] && tipo !== "auto") throw new Error(`Tipo de PDF desconhecido: ${tipo}`);
     const info = [];
     for (let i = 0; i < pdf.numPages; i++) {
       const pagina = await pdf.getPage(i + 1);
@@ -526,9 +519,13 @@ const Logica = (() => {
       const imgs = imagens(ops, caixas[i]);
       const imagemEtiqueta = detectaEtiqueta(imgs);
       const etiquetaAlbum = detectaEtiquetaAlbum(imgs);
-      const rodapeExpress = RE_RODAPE_EXPRESS.test(lista.map(p => p.text).join(" "));
+      const texto = lista.map(p => p.text).join(" ");
+      const rodapeExpress = RE_RODAPE_EXPRESS.test(texto);
+      const modeloExpress = RE_MODELO_EXPRESS.test(texto);
+      const modeloAlbum = modeloAlbumNo(texto);
       const gaveta = tipo === "express" ? (estado === "visivel" ? 3 : 1) : (imagemEtiqueta ? 3 : 1);
-      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress });
+      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress, modeloExpress, modeloAlbum,
+        familia: tipo === "auto" ? null : tipo });
       pagina.cleanup();
       progresso((i + 1) / pdf.numPages, { atual: i + 1, total: pdf.numPages });
     }
@@ -538,6 +535,55 @@ const Logica = (() => {
       else p.encomenda = atual;
     }
     return info;
+  }
+
+  // Deteção automática (1.8). Decide o papel de cada folha pela própria folha, e devolve o tipo
+  // efetivo do PDF ("album", "express" ou MISTO), que vai para o verificarFormato:
+  // - sem nenhuma folha Express: o PDF todo pela regra dos álbuns (igual ao tipo manual album);
+  // - sem nenhuma etiqueta de álbum em imagem: o PDF todo pela regra Express (igual ao manual);
+  // - com as duas: cada folha com o número visível é classificada pelas suas marcas:
+  //   etiqueta de álbum em imagem → A4-Etiqueta (álbum); modelo Express → A4-Etiqueta (Express);
+  //   modelo Dreambooks sem etiqueta em imagem (o segundo modelo de folha) → a regra dos álbuns,
+  //   A4-Normal. As folhas sem número visível (continuações) são A4-Normal e herdam a família da
+  //   última folha com número visível. Uma folha com número visível sem marcas, ou com as dos
+  //   dois modelos, fica sem família: o verificarFormato recusa o PDF.
+  // - sem nenhuma das marcas: "indefinido", recusado no verificarFormato.
+  // "Álbum" aqui é a família Dreambooks / Fotoprix: etiqueta em imagem ou modelo Dreambooks.
+  function classificarAuto(info) {
+    const temAlbum = info.some(p => p.etiquetaAlbum || p.modeloAlbum);
+    const temExpress = info.some(p => p.modeloExpress);
+    if (!temAlbum && !temExpress) {
+      for (const p of info) { p.familia = null; p.gaveta = 1; }
+      return "indefinido";
+    }
+    if (!temAlbum || !temExpress) {
+      const t = temAlbum ? "album" : "express";
+      for (const p of info) {
+        p.familia = t;
+        p.gaveta = t === "express" ? (p.estado === "visivel" ? 3 : 1) : (p.imagemEtiqueta ? 3 : 1);
+      }
+      return t;
+    }
+    let familia = null;
+    for (const p of info) {
+      if (p.estado === "visivel") {
+        if (p.etiquetaAlbum) { familia = "album"; p.gaveta = 3; }
+        else if (p.modeloExpress && !p.modeloAlbum) { familia = "express"; p.gaveta = 3; }
+        else if (p.modeloAlbum && !p.modeloExpress) { familia = "album"; p.gaveta = p.imagemEtiqueta ? 3 : 1; }
+        else { familia = null; p.gaveta = 1; }
+      } else {
+        p.gaveta = 1;
+      }
+      p.familia = familia;
+    }
+    return MISTO;
+  }
+
+  // Folhas de cada família: {album, express}
+  function composicao(info) {
+    const c = { album: 0, express: 0 };
+    for (const p of info) if (p.familia) c[p.familia]++;
+    return c;
   }
 
   // ------------------------------------------------------------ continuações, páginas e formato
@@ -577,6 +623,43 @@ const Logica = (() => {
     const paginas = teste => info.flatMap((p, i) => (teste(p) ? [i + 1] : []));
     const outroTipo = t => `\n\nConfirme o tipo de PDF: se for ${TIPOS[t]}, escolha esse tipo e separe de novo.`;
 
+    if (tipo === "indefinido") {
+      throw new Error("Não reconheço as folhas deste PDF: não têm a etiqueta de envio em imagem " +
+        `(${FAMILIAS.album}) nem são folhas ${FAMILIAS.express}. O formato das folhas pode ter ` +
+        "mudado; nada foi escrito.");
+    }
+
+    if (tipo === MISTO) {
+      // Número visível sem nenhuma das marcas (ou com as dos dois modelos): podia ser etiqueta
+      // Express ou o segundo modelo de folha dos álbuns (A4-Normal). Aqui não se sabe.
+      const ambiguas = paginas(p => p.estado === "visivel" && !p.familia);
+      if (ambiguas.length) {
+        throw new Error(`O PDF mistura encomendas ${FAMILIAS.album} e ${FAMILIAS.express}, e há folhas ` +
+          `com o número de encomenda visível que não sei classificar (${frasePaginas(ambiguas)}): ` +
+          "não são de nenhum dos dois modelos de folha que conheço. Podem ser " +
+          "etiqueta ou A4-Normal; nada foi escrito.\n\nSepare essas encomendas num PDF à parte.");
+      }
+      // A regra dos álbuns: etiqueta em imagem sem o número visível. As continuações Express
+      // ficam de fora (miniaturas no canto dão falsos positivos, como no tipo Express).
+      const semNumero = paginas(p => p.estado !== "visivel" && p.imagemEtiqueta && p.familia !== "express");
+      if (semNumero.length) {
+        throw new Error(`Há folhas com etiqueta de envio sem o número de encomenda visível ` +
+          `(${frasePaginas(semNumero)}). Cada etiqueta começa uma encomenda, e as ` +
+          "folhas de índice seguintes ficariam com o número da anterior; nada foi escrito.");
+      }
+    }
+
+    if (tipo === "express" || tipo === MISTO) {
+      // Uma folha com o rodapé Express e sem o número visível iria para A4-Normal sem ser continuação
+      const semCabecalho = paginas(p => p.rodapeExpress && p.estado !== "visivel");
+      if (semCabecalho.length) {
+        throw new Error(`Há folhas com o rodapé "DreambooksPro Express" sem o número de encomenda ` +
+          `visível no cabeçalho (${frasePaginas(semCabecalho)}). Iriam para A4-Normal sem serem ` +
+          "continuações; nada foi escrito.");
+      }
+      if (tipo === MISTO) return;
+    }
+
     if (tipo === "express") {
       // Um PDF de álbuns não pode passar pela regra Express: as folhas de álbum têm a etiqueta de
       // envio numa imagem grande no canto. O rodapé "DreambooksPro Express" não serve para isto,
@@ -585,13 +668,6 @@ const Logica = (() => {
       if (comEtiquetaAlbum.length) {
         throw new Error(`Escolheu ${TIPOS.express}, mas há folhas com a etiqueta de envio em imagem, ` +
           `típica de ${TIPOS.album} (${frasePaginas(comEtiquetaAlbum)}); nada foi escrito.` + outroTipo("album"));
-      }
-      // Uma folha com o rodapé Express e sem o número visível iria para A4-Normal sem ser continuação
-      const semCabecalho = paginas(p => p.rodapeExpress && p.estado !== "visivel");
-      if (semCabecalho.length) {
-        throw new Error(`Há folhas com o rodapé "DreambooksPro Express" sem o número de encomenda ` +
-          `visível no cabeçalho (${frasePaginas(semCabecalho)}). Iriam para A4-Normal sem serem ` +
-          "continuações; nada foi escrito.");
       }
       return;
     }
@@ -828,9 +904,11 @@ const Logica = (() => {
 
   // dados: Uint8Array do PDF; nomePdf: nome do ficheiro. Devolve {info, plano, pdfs:
   // [{nome, bytes, folhas}] (um por parte, só com várias partes; vazio com uma), avisos,
-  // nPaginas, tipo}. tipo: chave de TIPOS, obrigatória (escolhida à mão na página).
-  async function separar(dados, nomePdf, { progresso = () => {}, tipo } = {}) {
-    if (!TIPOS[tipo]) throw new Error("Escolha o tipo de PDF antes de separar.");
+  // nPaginas, tipo, composicao}. tipo: "auto" (por omissão, a página usa sempre este) ou uma
+  // chave de TIPOS; o tipo devolvido é o efetivo ("album", "express" ou MISTO), e composicao
+  // as folhas de cada família.
+  async function separar(dados, nomePdf, { progresso = () => {}, tipo = "auto" } = {}) {
+    if (!TIPOS[tipo] && tipo !== "auto") throw new Error(`Tipo de PDF desconhecido: ${tipo}`);
     let origem, pdf;
     progresso(0, { fase: "abrir" });
     try {
@@ -850,22 +928,23 @@ const Logica = (() => {
       // disso pode haver partes, e a escrita leva cerca de 30 % do tempo (medido no triplicado).
       const peso = pdf.numPages > 2 * LIMITE_INSERCOES ? 0.7 : 1;
       const info = await analisarPaginas(pdf, caixas, (x, d) => progresso(peso * x, { fase: "analisar", ...d }), tipo);
-      verificarFormato(info, paginasLib.map(p => p.getRotation().angle), tipo);
+      const efetivo = tipo === "auto" ? classificarAuto(info) : tipo;
+      verificarFormato(info, paginasLib.map(p => p.getRotation().angle), efetivo);
       const plano = planoImpressao(info);
       const pdfs = await pdfsPartes(origem, info, nomePdf, plano.partes,
         (x, d) => progresso(peso + (1 - peso) * x, { fase: "partes", ...d }));
       progresso(1);
-      return { info, plano, pdfs, nPaginas: info.length, tipo, avisos: plano.avisos };
+      return { info, plano, pdfs, nPaginas: info.length, tipo: efetivo, composicao: composicao(info), avisos: plano.avisos };
     } finally {
       pdf.destroy();
     }
   }
 
   return {
-    PAPEL, PERFIL, TIPOS, separar, contarFolhas, nomeSeguro, semExtensao,
+    PAPEL, PERFIL, TIPOS, FAMILIAS, MISTO, nomeTipo, separar, contarFolhas, nomeSeguro, semExtensao,
     // expostas para os testes
     palavras, imagens, numeroNoCabecalho, detectaEtiqueta, analisarPaginas, caixaDe, abrirParaLeitura, descricaoPaginas,
-    verificarFormato, intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsPartes,
+    verificarFormato, classificarAuto, composicao, intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsPartes,
     LIMITE_CARACTERES, LIMITE_INSERCOES,
   };
 })();
@@ -1054,23 +1133,6 @@ function criarProgresso(el, tituloBase = document.title) {
     atualizarVista();
   }
 
-  // Tipo de PDF: sem valor por omissão; mudar de tipo deita fora o resultado anterior, que foi
-  // separado com a outra regra
-  for (const b of document.querySelectorAll("[data-nome-tipo]")) b.textContent = Logica.TIPOS[b.dataset.nomeTipo];
-  function radiosTipo() { return document.querySelectorAll('input[name="tipo"]'); }
-  function tipoEscolhido() { return [...radiosTipo()].find(r => r.checked)?.value || null; }
-  for (const r of radiosTipo()) {
-    r.addEventListener("change", () => {
-      document.querySelector(".tipos").classList.remove("falta");
-      if (trabalho && trabalho.tipo !== r.value) {
-        trabalho = null;
-        atualizarVista();
-        if (pdf) estadoPdf("Por separar");
-        estado(`Tipo mudado para ${Logica.TIPOS[r.value]} · carregue em Separar de novo`, "ativo");
-      }
-    });
-  }
-
   $("btn-pdf").addEventListener("click", () => $("input-pdf").click());
   $("input-pdf").addEventListener("change", e => {
     const f = e.target.files[0];
@@ -1109,7 +1171,6 @@ function criarProgresso(el, tituloBase = document.title) {
     $("btn-separar").disabled = sim;
     $("btn-separar").textContent = sim ? "A separar…" : "Separar";
     $("btn-pdf").disabled = sim;
-    for (const r of radiosTipo()) r.disabled = sim;
     atualizarVista();
   }
 
@@ -1126,12 +1187,6 @@ function criarProgresso(el, tituloBase = document.title) {
 
   $("btn-separar").addEventListener("click", async () => {
     if (ocupado || aLer) return;
-    const tipo = tipoEscolhido();
-    if (!tipo) {
-      document.querySelector(".tipos").classList.add("falta");
-      await mensagem(`Escolha primeiro o tipo de PDF: ${Logica.TIPOS.album} ou ${Logica.TIPOS.express}.`, "info");
-      return;
-    }
     if (!pdf) { await mensagem("Escolha primeiro o PDF.", "info"); return; }
     if (!window.pdfjsLib || !window.PDFLib) {
       await mensagem("As bibliotecas de PDF não carregaram. Recarregue a página.", "erro");
@@ -1149,7 +1204,8 @@ function criarProgresso(el, tituloBase = document.title) {
     estado(`A separar ${atual.nome}…`, "ativo");
     estadoPdf("A separar…", "ativo");
     try {
-      const res = await Logica.separar(atual.dados, atual.nome, { progresso, tipo });
+      // O tipo de PDF é detetado folha a folha (1.8): não há escolha na página
+      const res = await Logica.separar(atual.dados, atual.nome, { progresso, tipo: "auto" });
       barraProgresso.fase("A conferir as folhas com o original…");
       // As contagens são feitas aqui, com o pdf.js: o original e, com várias partes, cada PDF
       // acabado de gerar. É a conferência independente do motor: o original tem de ter as folhas
@@ -1177,7 +1233,7 @@ function criarProgresso(el, tituloBase = document.title) {
         erro = `${falha} Este PDF não passa para a impressão.`;
       } else {
         trabalho = {
-          nome: atual.nome, tipo: res.tipo, plano: res.plano, folhasPartes, folhasOriginal,
+          nome: atual.nome, tipo: res.tipo, composicao: res.composicao, plano: res.plano, folhasPartes, folhasOriginal,
           pdfs: res.pdfs.map(c => ({ nome: c.nome, blob: new Blob([c.bytes], { type: "application/pdf" }) })),
         };
         avisos = res.avisos;
@@ -1323,7 +1379,10 @@ function criarProgresso(el, tituloBase = document.title) {
     $("stat-normal-txt").textContent = nCont
       ? `Folhas A4-Normal · ${plural(nCont, "continuação", "continuações")}` : "Folhas A4-Normal";
     $("nome-trabalho").replaceChildren(el("b", { textContent: t.nome }),
-      el("span", { className: "pill neutro", textContent: Logica.TIPOS[t.tipo] }));
+      el("span", { className: "pill neutro", textContent: Logica.nomeTipo(t.tipo) }));
+    // O que a deteção automática encontrou, para conferir de relance
+    $("linha-tipos").textContent = Object.entries(t.composicao).filter(([, n]) => n)
+      .map(([f, n]) => `${Logica.FAMILIAS[f]}: ${plural(n, "folha", "folhas")}`).join("  ·  ");
 
     // Um só trabalho (o original), ou várias partes: cada uma com o seu cartão e o seu download
     $("nota-trabalho").hidden = nPartes === 1;
