@@ -219,7 +219,7 @@ Desde a **1.8** (2026-11-19), a pedido do utilizador, **não há escolha de tipo
   - rodapé Express sem número visível (Express e misto);
   - nenhuma das duas marcas em todo o PDF (`indefinido`): "Não reconheço as folhas deste PDF".
 - `separar()` devolve o tipo **efetivo** (`album`, `express` ou `misto`) e `composicao` (`{album, express}`, folhas de cada família). A página mostra o tipo na pill (`nomeTipo()`: "Misto" no misto) e, por baixo das contagens, o `#linha-tipos` ("Dreambooks / Fotoprix: 48 folhas · DreambooksPro Express: 176 folhas", nomes em `FAMILIAS`).
-- Os Álbuns 00 (PDF "álbuns geral", 284 folhas) e os Biscates (111 folhas) do utilizador têm todos o rodapé e o "LFM Express". **Por confirmar** (o utilizador diz que é muito raro e não tem exemplos): as folhas Biscates sem rodapé; se também não tiverem o "LFM Express", um PDF só delas dá `indefinido` e num misto ficam ambíguas: em ambos os casos recusa, nunca papel errado.
+- Os Álbuns 00 (PDF "álbuns geral", 284 folhas) e os Biscates (111 folhas) do utilizador têm todos o rodapé e o "LFM Express". As folhas Express **sem rodapé** são raras; os dois exemplos do utilizador (`6524360_1499423_label.pdf` e `6521088_1493712_label.pdf`, 2026-11-19, "Tipo: A - Dreambooks") têm o "LFM Express Nº" no cabeçalho e passam: sozinhas, igual à 1.7.4 Biscates (3131); num misto com etiquetas Dreambooks e uma folha do segundo modelo, A4-Etiqueta com as continuações em A4-Normal. Uma folha Express sem rodapé **e** sem "LFM Express" daria `indefinido` (sozinha) ou ambígua (num misto): recusa, nunca papel errado.
 
 ### Tipo de PDF (web 1.5)
 
