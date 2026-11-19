@@ -210,16 +210,16 @@ O número de encomenda tem a forma `3452270_643175` e pode estar em três estado
 
 Desde a **1.8** (2026-11-19), a pedido do utilizador, **não há escolha de tipo na página**: o tipo é detetado folha a folha (`classificarAuto()`), e um PDF pode **misturar** encomendas Dreambooks / Fotoprix (etiqueta em imagem) e DreambooksPro Express no mesmo binder, para a app servir todos os processos. A página chama sempre `separar(…, {tipo: "auto"})` (o valor por omissão). Os dois tipos manuais continuam na lógica (`TIPOS`, `{tipo: "album"}` / `{tipo: "express"}`), para os testes e para repor o seletor se for preciso (está na 1.7.4, commit `7a53116`).
 
-- Marcas de cada página, lidas no `analisarPaginas`: `etiquetaAlbum` (a etiqueta de envio dos álbuns em imagem, 284 × 195) e `modeloExpress` (`RE_MODELO_EXPRESS`: o rodapé "DreambooksPro Express" **ou** o "LFM Express Nº" do cabeçalho da folha de etiqueta, porque há Biscates sem o rodapé).
-- PDF **sem nenhuma** folha Express → o PDF todo pela regra `album`; **sem nenhuma** etiqueta de álbum → o PDF todo pela regra `express`. Nos dois casos o resultado é igual ao do tipo manual (verificado: plano igual ao da 1.7.4 nos troços puros do binder misto).
-- **Misto** (as duas marcas no PDF): folha com número visível → A4-Etiqueta se tiver a etiqueta de álbum em imagem ou a marca Express; folha sem número visível → A4-Normal (continuação), com a família herdada da última folha com número visível (`familia`).
+- Marcas de cada página, lidas no `analisarPaginas`: `etiquetaAlbum` (a etiqueta de envio dos álbuns em imagem, 284 × 195), `modeloExpress` (`RE_MODELO_EXPRESS`: o rodapé "DreambooksPro Express" **ou** o "LFM Express Nº" do cabeçalho da folha de etiqueta, porque há Biscates sem o rodapé) e `modeloAlbum` (`modeloAlbumNo()`: "Método de Pagamento" **e** "Saída Estimada", com E maiúsculo, do modelo Dreambooks / Fotoprix; as folhas Express têm "Pagamento:" e "Saída estimada:"). Medido a 2026-11-19 em 421 folhas reais: `modeloAlbum` em todas as 56 folhas Dreambooks / Fotoprix com número visível (48 com etiqueta e 8 do segundo modelo, trazidas pelo utilizador) e em nenhuma das 365 Express; `modeloExpress` em todas as Express e em nenhuma Dreambooks.
+- PDF **sem nenhuma** folha Express → o PDF todo pela regra `album`; **sem nenhuma** folha Dreambooks (nem etiqueta de álbum em imagem nem `modeloAlbum`) → o PDF todo pela regra `express`. Nos dois casos o resultado é igual ao do tipo manual (verificado: plano igual ao da 1.7.4 nos troços puros do binder misto).
+- **Misto** (as duas famílias no PDF): folha com número visível → etiqueta de álbum em imagem: A4-Etiqueta; só `modeloExpress`: A4-Etiqueta; só `modeloAlbum` (o **segundo modelo de folha**, miniaturas de 75 pt em x = 20): a regra dos álbuns, A4-Normal; folha sem número visível → A4-Normal (continuação), com a família herdada da última folha com número visível (`familia`).
 - Recusas novas (`verificarFormato` com o tipo efetivo `misto` ou `indefinido`):
-  - misto, folha com número visível **sem nenhuma das duas marcas**: recusa. Num PDF só de álbuns seria o segundo modelo de folha (A4-Normal), num PDF Express seria a etiqueta: num misto não se sabe. A mensagem sugere separar essas encomendas num PDF à parte;
+  - misto, folha com número visível **sem nenhuma das marcas, ou com as dos dois modelos**: recusa (podia ser etiqueta Express ou A4-Normal). A mensagem sugere separar essas encomendas num PDF à parte;
   - misto, continuação de álbum (família ≠ express) com etiqueta em imagem: a regra de sempre dos álbuns. Nas continuações Express a miniatura no canto é ignorada, como no tipo Express;
   - rodapé Express sem número visível (Express e misto);
   - nenhuma das duas marcas em todo o PDF (`indefinido`): "Não reconheço as folhas deste PDF".
 - `separar()` devolve o tipo **efetivo** (`album`, `express` ou `misto`) e `composicao` (`{album, express}`, folhas de cada família). A página mostra o tipo na pill (`nomeTipo()`: "Misto" no misto) e, por baixo das contagens, o `#linha-tipos` ("Dreambooks / Fotoprix: 48 folhas · DreambooksPro Express: 176 folhas", nomes em `FAMILIAS`).
-- **Por confirmar com PDFs reais** (não havia exemplos): que as folhas Biscates sem rodapé e as dos Álbuns 00 têm o "LFM Express" (se não tiverem, um PDF só delas dá `indefinido`, e num misto ficam ambíguas: em ambos os casos recusa, nunca papel errado), e que o segundo modelo de folha dos álbuns num PDF misto é raro (num misto é recusado).
+- Os Álbuns 00 (PDF "álbuns geral", 284 folhas) e os Biscates (111 folhas) do utilizador têm todos o rodapé e o "LFM Express". **Por confirmar** (o utilizador diz que é muito raro e não tem exemplos): as folhas Biscates sem rodapé; se também não tiverem o "LFM Express", um PDF só delas dá `indefinido` e num misto ficam ambíguas: em ambos os casos recusa, nunca papel errado.
 
 ### Tipo de PDF (web 1.5)
 
@@ -323,6 +323,9 @@ Binder1 misto  auto -> misto: 48 Dreambooks / Fotoprix (p1-48) + 176 DreambooksP
                              219 E + 5 N, uma só parte, base Gaveta 3, Inserir 57,59,77,89,91 (todas continuações Express)
                              = o plano da 1.7.4 com album nas p1-48 e express nas p49-224; recusado nos dois tipos manuais
 troços puros (p1-48, p49-224) em auto: plano igual ao do tipo manual na 1.7.4
+biscates.pdf (111 pág) e álbuns geral (284 pág, 2 partes) do utilizador, em auto: plano igual ao do tipo Biscates / Álbuns 00 na 1.7.4
+8 folhas do segundo modelo Dreambooks (uma por PDF, 2026-11-19): sozinhas = album, 8 A4-Normal (igual à 1.7.4 Álbuns);
+                             num misto com etiquetas Dreambooks e Biscates: A4-Normal (a 1.ª versão da 1.8, sem modeloAlbum, recusava-o)
 
 Sem carimbo nem guia (desde a 1.6)
 nos seis PDFs acima: análise, plano e avisos iguais aos da 1.5

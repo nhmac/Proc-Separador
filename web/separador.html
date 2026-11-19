@@ -338,6 +338,10 @@ const Logica = (() => {
   // Marca do modelo Express na folha de etiqueta: o rodapé ou o "LFM Express Nº" do cabeçalho
   // (há encomendas Biscates sem o rodapé)
   const RE_MODELO_EXPRESS = /DreambooksPro\s+Express|LFM\s+Express/i;
+  // Marca do modelo Dreambooks / Fotoprix, nas folhas com etiqueta e no segundo modelo de folha
+  // (A4-Normal com número visível, miniaturas de 75 pt): "Método de Pagamento" e "Saída Estimada".
+  // As folhas Express têm "Pagamento:" e "Saída estimada:". Medido a 2026-11-19 em 421 folhas reais.
+  const modeloAlbumNo = texto => /M[ée]todo\s+de\s+Pagamento/.test(texto) && /Sa[íi]da\s+Estimada/.test(texto);
 
   // Impressão num só trabalho: a Canon está instalada no Windows como uma impressora por
   // perfil. O perfil base leva o papel maioritário; o outro entra como folhas de inserção.
@@ -518,8 +522,9 @@ const Logica = (() => {
       const texto = lista.map(p => p.text).join(" ");
       const rodapeExpress = RE_RODAPE_EXPRESS.test(texto);
       const modeloExpress = RE_MODELO_EXPRESS.test(texto);
+      const modeloAlbum = modeloAlbumNo(texto);
       const gaveta = tipo === "express" ? (estado === "visivel" ? 3 : 1) : (imagemEtiqueta ? 3 : 1);
-      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress, modeloExpress,
+      info.push({ gaveta, encomenda: numero, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress, modeloExpress, modeloAlbum,
         familia: tipo === "auto" ? null : tipo });
       pagina.cleanup();
       progresso((i + 1) / pdf.numPages, { atual: i + 1, total: pdf.numPages });
@@ -536,15 +541,16 @@ const Logica = (() => {
   // efetivo do PDF ("album", "express" ou MISTO), que vai para o verificarFormato:
   // - sem nenhuma folha Express: o PDF todo pela regra dos álbuns (igual ao tipo manual album);
   // - sem nenhuma etiqueta de álbum em imagem: o PDF todo pela regra Express (igual ao manual);
-  // - com as duas: cada folha com o número visível é etiqueta se tiver a etiqueta de álbum em
-  //   imagem ou for uma folha de etiqueta Express. As folhas sem número visível (continuações)
-  //   são A4-Normal e herdam a família da última folha com número visível. Uma folha com número
-  //   visível sem nenhuma das duas marcas fica sem família: o verificarFormato recusa o PDF,
-  //   porque num PDF misto não se sabe se é etiqueta Express ou o segundo modelo de folha dos
-  //   álbuns (A4-Normal com número visível).
-  // - sem nenhuma das duas: "indefinido", recusado no verificarFormato.
+  // - com as duas: cada folha com o número visível é classificada pelas suas marcas:
+  //   etiqueta de álbum em imagem → A4-Etiqueta (álbum); modelo Express → A4-Etiqueta (Express);
+  //   modelo Dreambooks sem etiqueta em imagem (o segundo modelo de folha) → a regra dos álbuns,
+  //   A4-Normal. As folhas sem número visível (continuações) são A4-Normal e herdam a família da
+  //   última folha com número visível. Uma folha com número visível sem marcas, ou com as dos
+  //   dois modelos, fica sem família: o verificarFormato recusa o PDF.
+  // - sem nenhuma das marcas: "indefinido", recusado no verificarFormato.
+  // "Álbum" aqui é a família Dreambooks / Fotoprix: etiqueta em imagem ou modelo Dreambooks.
   function classificarAuto(info) {
-    const temAlbum = info.some(p => p.etiquetaAlbum);
+    const temAlbum = info.some(p => p.etiquetaAlbum || p.modeloAlbum);
     const temExpress = info.some(p => p.modeloExpress);
     if (!temAlbum && !temExpress) {
       for (const p of info) { p.familia = null; p.gaveta = 1; }
@@ -561,8 +567,10 @@ const Logica = (() => {
     let familia = null;
     for (const p of info) {
       if (p.estado === "visivel") {
-        familia = p.etiquetaAlbum ? "album" : p.modeloExpress ? "express" : null;
-        p.gaveta = familia ? 3 : 1;
+        if (p.etiquetaAlbum) { familia = "album"; p.gaveta = 3; }
+        else if (p.modeloExpress && !p.modeloAlbum) { familia = "express"; p.gaveta = 3; }
+        else if (p.modeloAlbum && !p.modeloExpress) { familia = "album"; p.gaveta = p.imagemEtiqueta ? 3 : 1; }
+        else { familia = null; p.gaveta = 1; }
       } else {
         p.gaveta = 1;
       }
@@ -622,13 +630,13 @@ const Logica = (() => {
     }
 
     if (tipo === MISTO) {
-      // Número visível sem etiqueta em imagem e sem as marcas Express: num PDF só de álbuns seria
-      // o segundo modelo de folha (A4-Normal), num PDF Express seria a etiqueta. Aqui não se sabe.
+      // Número visível sem nenhuma das marcas (ou com as dos dois modelos): podia ser etiqueta
+      // Express ou o segundo modelo de folha dos álbuns (A4-Normal). Aqui não se sabe.
       const ambiguas = paginas(p => p.estado === "visivel" && !p.familia);
       if (ambiguas.length) {
         throw new Error(`O PDF mistura encomendas ${FAMILIAS.album} e ${FAMILIAS.express}, e há folhas ` +
           `com o número de encomenda visível que não sei classificar (${frasePaginas(ambiguas)}): ` +
-          "não têm a etiqueta de envio em imagem nem são folhas de etiqueta Express. Podem ser " +
+          "não são de nenhum dos dois modelos de folha que conheço. Podem ser " +
           "etiqueta ou A4-Normal; nada foi escrito.\n\nSepare essas encomendas num PDF à parte.");
       }
       // A regra dos álbuns: etiqueta em imagem sem o número visível. As continuações Express
