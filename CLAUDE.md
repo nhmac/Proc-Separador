@@ -254,7 +254,9 @@ Desde a **1.9** (2026-11-23), a pedido do utilizador, a página tem um seletor *
 
 É a **única exceção à invariante 1** (ordem do original), decidida pelo utilizador: dentro de cada álbum a ordem das folhas mantém-se e as continuações com dados ficam sempre coladas; só mudam de sítio os álbuns sem cópia (bloco 2) e as folhas de índice a mais (bloco 3). As páginas do original nunca são alteradas: só se reordenam e se acrescentam a folha de rosto, os separadores e versos em branco.
 
-O lote: folha de rosto (totais, conferência, linhas do Inserir, observações com a página), separador, **bloco 1** (com cópia do Atelier), separador, **bloco 2** (sem cópia), separador, **bloco 3** (índices a mais dos álbuns do bloco 1, pela ordem do bloco 1; cada folha tem o código `N_N` no topo e junta-se ao álbum na picagem). Dentro de cada bloco mantém-se a ordem do combinado.
+O lote: folha de rosto (totais, conferência, linhas do Inserir e, desde a **1.9.1**, o **texto das observações** de cada álbum com a página da etiqueta; passa a duas ou mais folhas se for preciso), separador, **bloco 1** (com cópia do Atelier), separador, **bloco 2** (sem cópia), separador, **bloco 3** (índices a mais dos álbuns do bloco 1, pela ordem do bloco 1; cada folha tem o código `N_N` no topo e junta-se ao álbum na picagem; desde a **1.9.1** o separador do bloco 3 mostra, ao lado de cada álbum, o **formato do papel** entre `[ ]`, por exemplo `6540404_1533337  (2 fl.)  [30x30]`, para encontrar o álbum na pilha: o PDF combinado não traz o nome das pastas). Dentro de cada bloco mantém-se a ordem do combinado.
+
+Desde a 1.9.1 (2026-11-23, a pedido do utilizador): o texto das observações (`obsTexto`) vai do "Observações:" até ao fim da tabela, antes do "Ficheiros de:", sem o rodapé "DreambooksPro Express v2.0", em todas as folhas do álbum; o formato (`formatoDoAlbum()`) vem da linha "Papel Fotográfico - 30x25 - …" ou, sem ela, do primeiro produto com um formato (`20x20`, `38x25`). As páginas acrescentadas são compostas por `comporInfo()` e podem ter várias folhas; a folha de rosto depende da numeração, por isso compõe-se até o número de folhas estabilizar.
 
 Regras (as mesmas do script usado nos testes reais de 19/11, 20/11 e 23/11):
 - **Álbum** = uma folha com "Encomenda N_N" visível e as seguintes (todas têm o código `N_N` impresso; se não tiverem, recusa). Álbum repetido no PDF → recusa. A 1.ª folha tem de ter a tabela de produtos.
@@ -272,12 +274,15 @@ Resultados de referência (a sequência do lote igual, posição a posição, à
 
 ```
 combinado 23/11  616 pág, 273 álbuns (241 + 32)  -> 627 pág  1-2,187,224,277,350,383,448,459,492,535,558-627
+                                    (1.9.1: rosto com 2 folhas, 22 observações -> 628 pág  1-3,188,225,278,351,384,449,460,493,536,559-628)
 combinado 20/11  563 pág, 251 álbuns             -> 568 pág  1-2,407,438,493,508-568
 combinado 19/11b 665 pág, 296 álbuns             -> 672 pág  1-2,67,92,101,468,599-672
 combinado 19/11  886 pág, 404 álbuns, 284 MB     -> 894 pág  1-2,183,318,407,460,685,764,817-894
-298 PDFs de teste combinados, 582 pág            -> 639 pág  1-2,35,254,285,306,389,396,437,606-639
+298 PDFs de teste combinados, 582 pág            -> 639 pág  1-2,35,254,285,306,389,396,437,606-639  (1.9.1: 640 pág, 1-3,…)
 20/11 com limite 30 (teste das partes)           -> 3 partes: 532 + 30 + 6, 30/30/6 inserções, a sequência igual à de uma só parte
 ```
+Na 1.9.1 a sequência é a mesma (as folhas acrescentadas contam como uma), só muda o número de folhas da folha de rosto; o 20/11 continua igual (rosto com uma folha).
+
 Recusas testadas: álbum repetido, folha sem o código do álbum, PDF a começar numa folha de índice, PDF em branco, e (2026-11-23, com folhas reais trazidas pelo utilizador: `3482740_2071692_label.pdf` Dreambooks e `10256574_10361830_processed_label.pdf` Fotoprix) um PDF Dreambooks, um Fotoprix e um misto com álbuns DBP: os três recusados neste modo e aceites no modo Original.
 
 Depois da validação das observações, os Basic do bloco 2 podem ficar fora da ordem das pastas nas folhas físicas (decisão do utilizador, 2026-11-23): não é preciso repô-los na ordem.
