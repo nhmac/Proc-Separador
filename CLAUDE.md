@@ -15,6 +15,8 @@ Na versão web (a que está em uso) imprime-se de uma só forma:
 
 Desde a **1.6** (2026-10-22) **não há carimbo nem guia** na web: a pedido do utilizador, que os considera obsoletos. Com as folhas de inserção cada continuação sai no sítio, por isso o carimbo deixou de ser preciso, e o guia nunca foi usado. Até 100 inserções a app não gera ficheiro nenhum. Ver "Decisões já tomadas".
 
+Desde a **1.9** (2026-11-23) há um **segundo modo, escolhido à mão: Álbuns DBP - Divisão blocos**, para os álbuns DreambooksPRO, que reorganiza o PDF combinado em blocos por cópias (ver "Modo Álbuns DBP - Divisão blocos"). O modo **Original** (o de sempre) não mudou.
+
 Desde a **1.8** (2026-11-19) **o tipo de PDF é detetado sozinho**, folha a folha, e um PDF pode misturar os dois tipos (ver "O domínio" → "Deteção automática"). Da 1.5 à 1.7.4 o operador escolhia primeiro o **tipo de PDF**: **Fotolivros / Álbuns Dreambooks** (a regra de sempre, etiqueta detetada pela imagem) ou **Biscates / Álbuns 00** (folhas DreambooksPro Express, e desde a 1.7.3 também os álbuns DreambooksPRO da pasta "00", em que a etiqueta é a folha com o número de encomenda visível). Ver "O domínio" → "Tipo de PDF".
 
 O **modo antigo (ZIP)**, com o PDF partido em blocos por papel, foi **removido da web na 1.4** (2026-10-01), a pedido do utilizador. Continua a existir na versão Python e pode ser reposto a partir do git (ver "Restaurar o modo antigo").
@@ -243,9 +245,44 @@ Verificações cruzadas (`verificarFormato`), todas com erro e "nada foi escrito
   - folha com número visível e rodapé Express, sem etiqueta em imagem → recusa (auditoria de 2026-10-22: um PDF misto, álbum + folhas Express, passava com as etiquetas Express em A4-Normal);
   - nenhuma etiqueta em imagem e há rodapés Express → recusa (um PDF Express sem miniaturas passaria com zero etiquetas).
 
+## Modo Álbuns DBP - Divisão blocos (web 1.9)
+
+Desde a **1.9** (2026-11-23), a pedido do utilizador, a página tem um seletor **Modo** (`input[name="modo"]`) com dois modos à parte, escolhidos à mão:
+
+- **Original** (por omissão): tudo o que está descrito acima, sem nenhuma alteração (verificado: `info`, `plano`, `avisos` e PDFs das partes byte a byte iguais aos da 1.8.1 no combinado real de 20/11).
+- **Álbuns DBP - Divisão blocos** (`Logica.NOME_MODO_BLOCOS`; o nome foi escolhido pelo utilizador): para o PDF combinado dos `*_label.pdf` dos álbuns DreambooksPRO do dia, pela ordem das pastas de papel (sem Proc-Scanner e sem as pastas 00 / #Basic). Devolve **sempre** um PDF novo (o lote), para descarregar e imprimir inteiro com o perfil de **frente e verso** da A4-Etiqueta e as folhas A4-Normal como folhas de inserção. Mudar de modo deita fora o resultado; os rádios ficam desativados durante a separação.
+
+É a **única exceção à invariante 1** (ordem do original), decidida pelo utilizador: dentro de cada álbum a ordem das folhas mantém-se e as continuações com dados ficam sempre coladas; só mudam de sítio os álbuns sem cópia (bloco 2) e as folhas de índice a mais (bloco 3). As páginas do original nunca são alteradas: só se reordenam e se acrescentam a folha de rosto, os separadores e versos em branco.
+
+O lote: folha de rosto (totais, conferência, linhas do Inserir, observações com a página), separador, **bloco 1** (com cópia do Atelier), separador, **bloco 2** (sem cópia), separador, **bloco 3** (índices a mais dos álbuns do bloco 1, pela ordem do bloco 1; cada folha tem o código `N_N` no topo e junta-se ao álbum na picagem). Dentro de cada bloco mantém-se a ordem do combinado.
+
+Regras (as mesmas do script usado nos testes reais de 19/11, 20/11 e 23/11):
+- **Álbum** = uma folha com "Encomenda N_N" visível e as seguintes (todas têm o código `N_N` impresso; se não tiverem, recusa). Álbum repetido no PDF → recusa. A 1.ª folha tem de ter a tabela de produtos.
+- **Página de dados** (`lerPaginaBlocos`): antes do marcador "Ficheiros de:", uma linha começada por um código de 7 dígitos, "Item Produtos" ou "Observações:". Senão é **índice** (só miniaturas).
+- **Etiqueta**: cada álbum ocupa uma; frente = folha 1; verso = página 2 se for índice, senão **em branco** (uma continuação com dados nunca vai para o verso: a cópia do Atelier é só de frentes). As continuações com dados saem logo a seguir, em A4-Normal. Índices a mais: álbuns do bloco 1 → bloco 3; do bloco 2 → logo a seguir ao álbum.
+- **Bloco 2** (`blocoDoAlbum`): capa (último segmento da linha `Capa - …`) Basic, KoyLab, Minibook 20x20, Christmas Photo Album, Heritage Golden Christmas Album ou Gold Book, ou `Formato - Mini Books`, **sem** linha `Mala / Box` (a **Bolsa Líbia** não conta como box). Tudo o resto, incluindo capa cortada pelo gerador ou folha sem capa, vai para o bloco 1 (uma cópia a mais custa menos do que uma em falta).
+- Os produtos são o texto da coluna Produtos: as palavras a seguir ao código até uma folga de mais de 12 pt (`FOLGA_COLUNA`).
+- Só aceita PDFs só com folhas DreambooksPro Express (tipo efetivo `express` da deteção da 1.8, com o mesmo `verificarFormato`); outro PDF → recusa, com a sugestão do modo Original.
+- **Partes**: acima de `LIMITE_INSERCOES` folhas normais, o lote parte-se como no modo Original (`partirLote`): cortes só entre unidades (uma etiqueta com as folhas coladas, ou uma folha normal solta), partes cheias, linhas do Inserir na numeração de cada parte. Nomes: `<nome>_blocos.pdf` ou `<nome>_blocos_parte_1de2.pdf`.
+- Memória: os combinados têm 170-300 MB. A leitura (pdf.js, no próprio PDF, sem a cópia do `abrirParaLeitura`: nas folhas Express o número está sempre visível) e a escrita (pdf-lib) não ficam abertas ao mesmo tempo. Num browser de teste com 8 GB passou o combinado de 284 MB (886 páginas, 404 álbuns) em cerca de 55 s.
+- Verificações: cobertura (cada página do original exatamente uma vez), paridade (nenhuma folha de inserção a meio de uma etiqueta), releitura de cada PDF gerado e, na página, a contagem independente com o pdf.js.
+- Páginas acrescentadas desenhadas com as fontes padrão do pdf-lib (Helvetica): só WinAnsi, o resto passa a "?" (`seguroWinAnsi`).
+
+Resultados de referência (a sequência do lote igual, posição a posição, à do script Python dos testes reais; a coluna é a linha do Inserir):
+
+```
+combinado 23/11  616 pág, 273 álbuns (241 + 32)  -> 627 pág  1-2,187,224,277,350,383,448,459,492,535,558-627
+combinado 20/11  563 pág, 251 álbuns             -> 568 pág  1-2,407,438,493,508-568
+combinado 19/11b 665 pág, 296 álbuns             -> 672 pág  1-2,67,92,101,468,599-672
+combinado 19/11  886 pág, 404 álbuns, 284 MB     -> 894 pág  1-2,183,318,407,460,685,764,817-894
+298 PDFs de teste combinados, 582 pág            -> 639 pág  1-2,35,254,285,306,389,396,437,606-639
+20/11 com limite 30 (teste das partes)           -> 3 partes: 532 + 30 + 6, 30/30/6 inserções, a sequência igual à de uma só parte
+```
+Recusas testadas: álbum repetido, folha sem o código do álbum, PDF a começar numa folha de índice, PDF em branco. Por testar com um PDF real: a recusa de um PDF Dreambooks / Fotoprix neste modo.
+
 ## Invariantes que não se podem quebrar
 
-1. **A impressão sai pela ordem do PDF original.** Não se reordena nada. Esta regra **tem prioridade sobre o número de mudanças de papel** (ver "Decisões já tomadas"). No trabalho único imprime-se o próprio original; com várias partes, os PDFs das partes juntos pela ordem das partes dão exatamente o original, folha a folha (cada parte é um troço seguido, sem alterações). No modo de blocos (Python), os blocos são troços seguidos do mesmo papel: concatenados por ordem alfabética dos nomes, dão exatamente as páginas não-órfãs por ordem crescente.
+1. **A impressão sai pela ordem do PDF original.** Não se reordena nada. **Única exceção:** o modo Álbuns DBP - Divisão blocos (1.9), ligado à mão, em que só mudam de sítio os álbuns sem cópia e as folhas de índice a mais (ver a secção desse modo). Esta regra **tem prioridade sobre o número de mudanças de papel** (ver "Decisões já tomadas"). No trabalho único imprime-se o próprio original; com várias partes, os PDFs das partes juntos pela ordem das partes dão exatamente o original, folha a folha (cada parte é um troço seguido, sem alterações). No modo de blocos (Python), os blocos são troços seguidos do mesmo papel: concatenados por ordem alfabética dos nomes, dão exatamente as páginas não-órfãs por ordem crescente.
 2. **Nenhuma página se perde nem se duplica.** A união dos índices usados tem de ser exatamente `range(n_paginas)`; o plano tem de ter o mesmo número de folhas do original; com várias partes, cada PDF tem as folhas do seu troço e a soma é a do original (os cortes do `partirTrabalho()` são contíguos e cobrem tudo uma vez).
 3. **(Modo de blocos, Python) Toda a folha órfã da mesma encomenda sai junta no lote**, seja qual for o número delas, mesmo que no original apareçam separadas.
 4. **Uma folha sem número de onde herdar nunca recebe um número inventado**: é assinalada em `ATENÇÃO` (no Python, sai sem carimbo).
@@ -385,7 +422,7 @@ Linguagem **minimalista**, pedida pelo utilizador. O aspeto é o da linha "Proce
 
 ## Decisões já tomadas (não voltar a propor)
 
-- **Reordenar encomendas por tipo de papel** (todas as A4-Etiqueta primeiro) — implementado e **recusado**: a impressão tem de sair pela ordem do original.
+- **Reordenar encomendas por tipo de papel** (todas as A4-Etiqueta primeiro) — implementado e **recusado**: a impressão tem de sair pela ordem do original. A 1.9 não muda isto: o modo Álbuns DBP - Divisão blocos reorganiza por **cópias** (não por papel), só nos álbuns DBP e só quando é escolhido à mão.
 - **Filas de impressão por gaveta / impressão direta pela aplicação** — não é possível criar impressoras no posto. A Canon 2 já está instalada como uma impressora por perfil de gaveta, e é isso que a 1.2 usa. A impressão direta continua fora de questão: uma página web não imprime com um perfil escolhido.
 - **Juntar todas as folhas A4-Normal num lote único** — recusado: quebra a ordem original.
 - **Vários PDFs de uma vez** — retirado: era a origem de várias falhas. Um PDF de cada vez.

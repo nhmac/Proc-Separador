@@ -83,6 +83,16 @@
   .btn-principal.azul { background: var(--accent); }
   .btn-principal.azul:hover:not(:disabled) { background: var(--accent-hover); }
   .btn-principal.azul:disabled { background: var(--card); color: var(--texto-sec); }
+  /* Modo de operação (1.9): Original ou Álbuns DBP - Divisão blocos, escolhido à mão */
+  .modos { display: grid; gap: 8px; }
+  .modo {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    background: var(--card); border: 1px solid var(--borda); font-size: 13.5px; transition: background .15s, border-color .15s;
+  }
+  .modo:hover { background: var(--card-hover); }
+  .modo:has(input:checked) { border-color: var(--accent); background: var(--accent-suave); }
+  .modo:has(input:disabled) { cursor: default; opacity: .6; }
+  .modo input { margin: 0; accent-color: var(--accent); flex: none; }
   .versao { font-size: 12px; color: var(--texto-sec); text-align: center; opacity: .7; }
 
   /* -------------------------------------------------------- Área principal */
@@ -196,6 +206,12 @@
   .campo code span { white-space: nowrap; }
   .campo .copiar { width: auto; min-width: 120px; height: 44px; align-self: flex-start; }
   .copiar.copiado, .copiar.copiado:hover:not(:disabled) { background: var(--sucesso); }
+  /* Listas do modo em blocos (observações, continuações) */
+  .lista-ids {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 20px;
+    padding: 4px 0 16px; font: 13px/1.6 var(--mono); color: var(--texto-sec);
+  }
+  .lista-ids b { color: var(--texto); font-weight: 600; }
 
   /* Avisos e perguntas: só para avisos e erros, nunca para sucesso */
   dialog {
@@ -238,6 +254,11 @@
     <h1>Proc-Separador</h1>
     <div class="subtitulo">Para imprimir Fotolivros, Álbuns Dreambooks, Biscates e Álbuns 00</div>
 
+    <div class="secao" id="rotulo-modos">Modo</div>
+    <div class="modos" role="radiogroup" aria-labelledby="rotulo-modos">
+      <label class="modo"><input type="radio" name="modo" value="original" checked><span>Original</span></label>
+      <label class="modo"><input type="radio" name="modo" value="blocos"><span data-nome-modo-blocos>Álbuns DBP - Divisão blocos</span></label>
+    </div>
     <div class="secao">PDF</div>
     <button class="btn" id="btn-pdf" type="button">Escolher PDF…</button>
     <input id="input-pdf" type="file" accept=".pdf,application/pdf" hidden>
@@ -254,7 +275,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.8.1</div>
+      <div class="versao">Versão web 1.9</div>
     </div>
   </aside>
 
@@ -274,8 +295,8 @@
       <div class="card resumo">
         <div id="nome-trabalho"></div>
         <div class="stats">
-          <div class="stat"><b id="stat-total">0</b><span>Folhas no total</span></div>
-          <div class="stat etiqueta"><b id="stat-etiqueta">0</b><span>Folhas A4-Etiqueta</span></div>
+          <div class="stat"><b id="stat-total">0</b><span id="stat-total-txt">Folhas no total</span></div>
+          <div class="stat etiqueta"><b id="stat-etiqueta">0</b><span id="stat-etiqueta-txt">Folhas A4-Etiqueta</span></div>
           <div class="stat normal"><b id="stat-normal">0</b><span id="stat-normal-txt">Folhas A4-Normal</span></div>
         </div>
         <div id="linha-tipos"></div>
@@ -507,7 +528,7 @@ const Logica = (() => {
   // Por página: {gaveta, encomenda, estado, imagemEtiqueta, etiquetaAlbum, rodapeExpress}, com a
   // herança dos números já resolvida. imagemEtiqueta, etiquetaAlbum e rodapeExpress servem às
   // verificações cruzadas do tipo.
-  async function analisarPaginas(pdf, caixas, progresso = () => {}, tipo = "album") {
+  async function analisarPaginas(pdf, caixas, progresso = () => {}, tipo = "album", aoLer = null) {
     if (!TIPOS[tipo] && tipo !== "auto") throw new Error(`Tipo de PDF desconhecido: ${tipo}`);
     const info = [];
     for (let i = 0; i < pdf.numPages; i++) {
@@ -515,6 +536,7 @@ const Logica = (() => {
       const conteudo = await pagina.getTextContent();
       const ops = await pagina.getOperatorList({ annotationMode: pdfjsLib.AnnotationMode.DISABLE });
       const lista = palavras(conteudo, caixas[i].altura);
+      if (aoLer) aoLer(i, lista);
       const [estado, numero] = numeroNoCabecalho(lista, caixas[i]);
       const imgs = imagens(ops, caixas[i]);
       const imagemEtiqueta = detectaEtiqueta(imgs);
@@ -940,12 +962,389 @@ const Logica = (() => {
     }
   }
 
+  // ------------------------------------------------------------ Álbuns DBP - Divisão blocos (1.9)
+  // Modo à parte, ligado à mão na página (a pedido do utilizador, 2026-11-23). É a ÚNICA exceção à
+  // ordem do original: dentro de cada álbum a ordem das folhas mantém-se (as continuações com dados
+  // ficam sempre coladas), e só mudam de sítio os álbuns sem cópia (bloco 2) e as folhas de índice a
+  // mais (bloco 3). Entrada: o PDF combinado dos *_label.pdf do dia, pela ordem das pastas de papel.
+  // Saída: um PDF novo (ou partes, acima de LIMITE_INSERCOES inserções) com folha de rosto,
+  // separadores e três blocos, impresso em frente e verso na A4-Etiqueta, com as folhas normais
+  // como folhas de inserção. As páginas do original nunca são alteradas.
+  const NOME_MODO_BLOCOS = "Álbuns DBP - Divisão blocos";
+  // Capas que não levam cópia do Atelier (o RULES.md do sistema de cópias, confirmado a 2026-11-19)
+  const CAPAS_SEM_COPIA = ["basic", "koylab", "minibook 20x20", "christmas photo album",
+    "heritage golden christmas album", "gold book"];
+  const RE_CODIGO_ITEM = /^\d{7}$/u;
+  const FOLGA_COLUNA = 12; // pt: acima disto, a palavra seguinte já é de outra coluna da tabela
+
+  // Linhas da página antes das miniaturas: as palavras de cada linha (já ordenadas por x), até ao
+  // marcador "Ficheiros de:". O que vem depois são os nomes dos ficheiros das miniaturas.
+  function linhasDeDados(lista) {
+    const linhas = [];
+    for (const p of lista) {
+      const ultima = linhas[linhas.length - 1];
+      if (ultima && ultima.linha === p.linha) ultima.palavras.push(p);
+      else linhas.push({ linha: p.linha, palavras: [p] });
+    }
+    const antes = [];
+    for (const { palavras: ws } of linhas) {
+      const k = ws.findIndex((w, i) => w.text === "Ficheiros" && ws[i + 1] && ws[i + 1].text.startsWith("de:"));
+      if (k >= 0) { if (k) antes.push(ws.slice(0, k)); break; }
+      antes.push(ws);
+    }
+    return antes;
+  }
+
+  // O que interessa de uma página para os blocos: se tem dados (linhas de produto com o código de 7
+  // dígitos, o cabeçalho "Item Produtos" ou "Observações:") ou só miniaturas (índice), os produtos
+  // (o texto da coluna Produtos) e se tem observações.
+  function lerPaginaBlocos(lista) {
+    const linhas = linhasDeDados(lista);
+    const produtos = [];
+    let dados = false, observacoes = false;
+    for (const ws of linhas) {
+      if (ws.some(w => w.text.startsWith("Observações"))) observacoes = true;
+      if (ws.some(w => w.text === "Observações:")) dados = true;
+      if (ws.some((w, i) => w.text === "Item" && ws[i + 1] && ws[i + 1].text === "Produtos")) dados = true;
+      if (RE_CODIGO_ITEM.test(ws[0].text) && ws.length > 1) {
+        dados = true;
+        const nome = [ws[1].text];
+        for (let i = 2; i < ws.length && ws[i].x0 - ws[i - 1].x1 <= FOLGA_COLUNA; i++) nome.push(ws[i].text);
+        if (!/^Encomenda\b/u.test(nome[0])) produtos.push(nome.join(" "));
+      }
+    }
+    return { dados, observacoes, produtos };
+  }
+
+  // Bloco de um álbum: 2 (sem cópia) se a capa for uma das CAPAS_SEM_COPIA, ou Mini Books, e a folha
+  // não tiver uma box (a Bolsa Líbia não conta como box); senão 1. Na dúvida (sem capa, capa cortada
+  // pelo gerador), bloco 1: uma cópia a mais custa menos do que uma em falta.
+  function blocoDoAlbum(produtos) {
+    const capa = produtos.find(p => /^Capa\s+-/u.test(p));
+    const modelo = capa ? capa.split(" - ").pop().trim() : null;
+    const miniBooks = produtos.some(p => p.startsWith("Formato - Mini Books"));
+    const box = produtos.some(p => p.startsWith("Mala / Box") && !/bolsa\s+l[ií]bia/iu.test(p));
+    const semCopia = (CAPAS_SEM_COPIA.includes((modelo || "").toLowerCase()) || miniBooks) && !box;
+    return { bloco: semCopia ? 2 : 1, modelo, miniBooks, box };
+  }
+
+  // Os álbuns do PDF: cada um começa numa folha com "Encomenda N_N" visível e leva as folhas
+  // seguintes (todas têm o código N_N impresso). paginas[i] = {dados, observacoes, produtos, texto}.
+  function albunsDoPdf(info, paginas) {
+    const albuns = [];
+    info.forEach((p, i) => {
+      if (p.estado === "visivel") albuns.push({ id: p.encomenda, ini: i, n: 1 });
+      else if (albuns.length) albuns[albuns.length - 1].n++;
+      else throw new Error("A 1.ª folha do PDF não tem o cabeçalho \"Encomenda …\" visível; nada foi escrito.");
+    });
+    const vistos = new Map();
+    for (const a of albuns) {
+      if (vistos.has(a.id)) {
+        throw new Error(`O álbum ${a.id} aparece duas vezes no PDF (páginas ${vistos.get(a.id) + 1} e ${a.ini + 1}). ` +
+          "Retire o repetido e combine de novo; nada foi escrito.");
+      }
+      vistos.set(a.id, a.ini);
+      const pags = paginas.slice(a.ini, a.ini + a.n);
+      const semCodigo = pags.flatMap((p, j) => (j && !p.texto.includes(a.id) ? [a.ini + j + 1] : []));
+      if (semCodigo.length) {
+        throw new Error(`Há folhas sem o código ${a.id} a seguir a esse álbum (${frasePaginas(semCodigo)}): ` +
+          "não sei a que álbum pertencem; nada foi escrito.");
+      }
+      if (!pags[0].dados) {
+        throw new Error(`A folha principal do álbum ${a.id} (página ${a.ini + 1}) não tem a tabela de produtos; ` +
+          "nada foi escrito.");
+      }
+      a.tipos = pags.map(p => (p.dados ? "D" : "I")).join("");
+      a.produtos = pags.flatMap(p => p.produtos);
+      a.observacoes = pags.some(p => p.observacoes);
+      Object.assign(a, blocoDoAlbum(a.produtos));
+    }
+    return albuns;
+  }
+
+  // A sequência do lote: [{k: "src", i} | {k: "branco", ref} | {k: "rosto"|"sep1"|"sep2"|"sep3"}],
+  // cada uma com o papel (3 = etiqueta, impressa em frente e verso; 1 = normal, folha de inserção).
+  // Cada álbum é uma etiqueta: a folha principal na frente e, no verso, a página 2 se for só de
+  // índice, senão em branco (as continuações com dados não vão para o verso: a cópia é só de
+  // frentes). As continuações com dados saem logo a seguir, em folha normal. Os índices a mais vão
+  // para o bloco 3 (álbuns do bloco 1) ou logo a seguir ao álbum (bloco 2, que não se copia).
+  function sequenciaBlocos(albuns) {
+    const seq = [{ k: "rosto", papel: 1 }, { k: "sep1", papel: 1 }];
+    const indices = [];
+    const onde = new Map(); // id -> {etiqueta, extra: []} (posições na sequência, base 0)
+    const album = (a, paraBloco3) => {
+      const o = { etiqueta: seq.length, extra: [], bloco: a.bloco };
+      onde.set(a.id, o);
+      seq.push({ k: "src", i: a.ini, papel: 3, id: a.id });
+      let resto;
+      if (a.tipos[1] === "I") { seq.push({ k: "src", i: a.ini + 1, papel: 3, id: a.id }); resto = 2; }
+      else { seq.push({ k: "branco", ref: a.ini, papel: 3, id: a.id }); resto = 1; }
+      for (let j = resto; j < a.n; j++) {
+        if (a.tipos[j] === "D" || !paraBloco3) { o.extra.push(seq.length); seq.push({ k: "src", i: a.ini + j, papel: 1, id: a.id }); }
+        else indices.push({ k: "src", i: a.ini + j, papel: 1, id: a.id });
+      }
+    };
+    const b1 = albuns.filter(a => a.bloco === 1), b2 = albuns.filter(a => a.bloco === 2);
+    for (const a of b1) album(a, true);
+    const sep2 = seq.length;
+    seq.push({ k: "sep2", papel: 1 });
+    for (const a of b2) album(a, false);
+    const sep3 = seq.length;
+    seq.push({ k: "sep3", papel: 1 });
+    for (const x of indices) { onde.get(x.id).extra.push(seq.length); seq.push(x); }
+    // Paridade: antes de cada folha de inserção, as páginas de etiqueta têm de fechar a folha
+    let e = 0;
+    for (const x of seq) {
+      if (x.papel === 1 && e % 2) throw new Error("Uma folha de inserção ficaria a meio de uma etiqueta; nada foi escrito.");
+      if (x.papel === 3) e++;
+    }
+    return { seq, onde, b1, b2, sep2, sep3, nIndices: indices.length };
+  }
+
+  // Partes do lote, acima de `limite` folhas de inserção: cortes só entre unidades (uma etiqueta com
+  // as folhas que lhe ficam coladas, ou uma folha normal solta), partes cheias.
+  function partirLote(seq, limite = LIMITE_INSERCOES) {
+    const unidades = [];
+    for (let p = 0; p < seq.length;) {
+      let q = p + 1;
+      if (seq[p].papel === 3) {
+        q = p + 2;
+        while (q < seq.length && seq[q].papel === 1 && seq[q].k === "src" && seq[q].id === seq[p].id) q++;
+      }
+      unidades.push([p, q]);
+      p = q;
+    }
+    const cortes = [];
+    let inicio = 0, naParte = 0;
+    for (const [a, b] of unidades) {
+      let n = 0;
+      for (let p = a; p < b; p++) if (seq[p].papel === 1) n++;
+      if (naParte + n > limite && a > inicio) { cortes.push([inicio, a]); inicio = a; naParte = 0; }
+      naParte += n;
+    }
+    cortes.push([inicio, seq.length]);
+    for (const [a, b] of cortes) {
+      let n = 0;
+      for (let p = a; p < b; p++) if (seq[p].papel === 1) n++;
+      if (n > limite) throw new Error(`Uma parte do lote ficaria com mais de ${limite} folhas de inserção; nada foi escrito.`);
+    }
+    return cortes;
+  }
+
+  // ---- páginas acrescentadas (folha de rosto e separadores), desenhadas com o pdf-lib
+  // As fontes padrão do PDF só têm o WinAnsi: o resto troca-se por "?"
+  const WINANSI = new Set([..."€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ"]);
+  const seguroWinAnsi = t => Array.from(String(t)).map(c => {
+    const n = c.codePointAt(0);
+    return (n >= 32 && n <= 126) || (n >= 160 && n <= 255) || WINANSI.has(c) ? c : "?";
+  }).join("");
+
+  async function paginaInfo(doc, largura, altura, titulo, grandes, secoes) {
+    const normal = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+    const negrito = await doc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+    const pg = doc.addPage([largura, altura]);
+    const M = 40;
+    let y = altura - 60;
+    pg.drawText(seguroWinAnsi(titulo), { x: M, y, size: 26, font: negrito });
+    y -= 40;
+    for (const g of grandes) { pg.drawText(seguroWinAnsi(g), { x: M, y, size: 16, font: negrito }); y -= 24; }
+    for (const s of secoes) {
+      y -= 12;
+      if (y < 60) break;
+      pg.drawText(seguroWinAnsi(s.titulo), { x: M, y, size: 11, font: negrito });
+      y -= 16;
+      if (s.texto) {
+        // Texto corrido (as linhas do Inserir), partido só nas vírgulas
+        for (const bruto of s.texto) {
+          let linha = "";
+          for (const t of bruto.split(",")) {
+            const tenta = linha ? `${linha},${t}` : t;
+            if (linha && normal.widthOfTextAtSize(seguroWinAnsi(tenta), 10) > largura - 2 * M) {
+              pg.drawText(seguroWinAnsi(linha + ","), { x: M, y, size: 10, font: normal }); y -= 13; linha = t;
+            } else linha = tenta;
+          }
+          if (linha) { pg.drawText(seguroWinAnsi(linha), { x: M, y, size: 10, font: normal }); y -= 13; }
+        }
+      }
+      if (s.lista) {
+        // Lista em colunas, até ao fundo da folha
+        const col = s.colunas || 3, larguraCol = (largura - 2 * M) / col;
+        const porCol = Math.max(1, Math.floor((y - 40) / 13));
+        s.lista.slice(0, porCol * col).forEach((t, k) => {
+          const c = Math.floor(k / porCol), r = k % porCol;
+          pg.drawText(seguroWinAnsi(t), { x: M + c * larguraCol, y: y - r * 13, size: 10, font: normal });
+        });
+        if (s.lista.length > porCol * col) {
+          pg.drawText(seguroWinAnsi(`… e mais ${s.lista.length - porCol * col} (ver na página)`), { x: M, y: 30, size: 10, font: negrito });
+        }
+        y -= Math.min(s.lista.length, porCol) * 13;
+      }
+    }
+    return pg;
+  }
+
+  // dados: Uint8Array do PDF combinado; devolve {albuns, plano, pdfs: [{nome, bytes, folhas}],
+  // nPaginas, avisos}. limite só para os testes (por omissão LIMITE_INSERCOES).
+  async function separarBlocos(dados, nomePdf, { progresso = () => {}, limite = LIMITE_INSERCOES, data = new Date() } = {}) {
+    // Os combinados destes dias têm 170-300 MB: para poupar memória, a leitura (pdf.js) e a
+    // escrita (pdf-lib) não ficam abertas ao mesmo tempo, e a leitura faz-se no próprio PDF, sem
+    // a cópia com a caixa alargada do abrirParaLeitura: nas folhas DreambooksPro Express o número
+    // que interessa está sempre visível, e "invisível" e "ausente" dão o mesmo papel.
+    progresso(0, { fase: "abrir" });
+    let pdf;
+    try {
+      pdf = await abrirPdfjs(dados);
+    } catch (e) {
+      throw new Error(`Não consegui ler o PDF: ${e.message || e}`);
+    }
+    let info, albuns;
+    const paginas = [];
+    try {
+      const caixas = [], rotacoes = [];
+      for (let i = 0; i < pdf.numPages; i++) {
+        const pg = await pdf.getPage(i + 1);
+        // A MediaBox, como o caixaDe (o view do pdf.js é a CropBox; nestes PDFs são iguais)
+        const [x0, y0, x1, y1] = pg.view;
+        caixas.push({ largura: Math.abs(x1 - x0), altura: Math.abs(y1 - y0) });
+        rotacoes.push(pg.rotate || 0);
+      }
+      info = await analisarPaginas(pdf, caixas, (x, d) => progresso(0.7 * x, { fase: "analisar", ...d }), "auto",
+        (i, lista) => { paginas[i] = { ...lerPaginaBlocos(lista), texto: lista.map(p => p.text).join(" ") }; });
+      const efetivo = classificarAuto(info);
+      verificarFormato(info, rotacoes, efetivo);
+      if (efetivo !== "express") {
+        throw new Error(`O modo ${NOME_MODO_BLOCOS} é só para os álbuns DreambooksPRO (folhas DreambooksPro Express), ` +
+          `e este PDF tem folhas ${FAMILIAS.album}; nada foi escrito.\n\nPara outros PDFs, use o modo Original.`);
+      }
+      albuns = albunsDoPdf(info, paginas);
+    } finally {
+      pdf.destroy();
+    }
+    let origem;
+    try {
+      origem = await PDFLib.PDFDocument.load(dados, { updateMetadata: false });
+    } catch (e) {
+      throw new Error(`Não consegui ler o PDF: ${e.message || e}`);
+    }
+    if (origem.getPageCount() !== info.length) {
+      throw new Error("O pdf.js e o pdf-lib não leem o mesmo número de páginas; nada foi escrito.");
+    }
+
+    const { seq, onde, b1, b2, sep2, sep3, nIndices } = sequenciaBlocos(albuns);
+    // Cobertura: cada página do original exatamente uma vez
+    const usadas = seq.filter(x => x.k === "src").map(x => x.i).sort((a, b) => a - b);
+    if (usadas.length !== info.length || usadas.some((i, k) => i !== k)) {
+      throw new Error("O lote não tem todas as páginas do original exatamente uma vez; nada foi escrito.");
+    }
+    const cortes = partirLote(seq, limite);
+    const partes = cortes.map(([a, b], k) => {
+      const inseridas = [];
+      for (let p = a; p < b; p++) if (seq[p].papel === 1) inseridas.push(p - a + 1);
+      const linhas = inseridas.length ? dividirLinhas(intervalos(inseridas)) : [];
+      const contagem = { 3: 0, 1: 0 };
+      for (let p = a; p < b; p++) contagem[seq[p].papel]++;
+      return { n: k + 1, de: a + 1, ate: b, total: b - a, contagem, paginasInseridas: inseridas, linhas,
+        folhasPorLinha: linhas.map(folhasDaLinha) };
+    });
+    // Página do lote → {parte, pagina na parte}
+    const local = pos => {
+      const parte = partes.find(x => pos + 1 >= x.de && pos + 1 <= x.ate);
+      return { parte: parte.n, pagina: pos + 2 - parte.de, lote: pos + 1 };
+    };
+    const contagem = { 3: 0, 1: 0 };
+    for (const x of seq) contagem[x.papel]++;
+    const blocos = {
+      1: { de: 3, ate: sep2, albuns: b1.length },
+      2: { de: sep2 + 2, ate: sep3, albuns: b2.length },
+      3: { de: sep3 + 2, ate: seq.length, folhas: nIndices, albuns: new Set(seq.slice(sep3 + 1).map(x => x.id)).size },
+    };
+    const observacoes = albuns.filter(a => a.observacoes).map(a => {
+      const o = onde.get(a.id);
+      return { id: a.id, bloco: a.bloco, etiqueta: local(o.etiqueta), extra: o.extra.map(local) };
+    });
+    const continuacoes = albuns.filter(a => a.tipos.slice(1).includes("D")).map(a => {
+      const o = onde.get(a.id);
+      return { id: a.id, etiqueta: local(o.etiqueta), extra: o.extra.filter(p => p < sep3).map(local) };
+    });
+    const plano = {
+      total: seq.length, nOriginal: info.length, acrescentadas: seq.length - info.length, contagem,
+      partes, blocos, observacoes, continuacoes,
+      bloco2: b2.map(a => ({ id: a.id, modelo: a.modelo || (a.miniBooks ? "Mini Books" : "") })),
+    };
+
+    // ---- escrita: um PDF por parte (uma só, até `limite` inserções)
+    const dd = n => String(n).padStart(2, "0");
+    const hoje = `${dd(data.getDate())}/${dd(data.getMonth() + 1)}/${data.getFullYear()}`;
+    const ondeTxt = l => (partes.length > 1 ? `parte ${l.parte}, pág. ${l.pagina}` : `pág. ${l.lote}`);
+    const raiz = `${nomeSeguro(semExtensao(nomePdf))}_blocos`;
+    const largura = String(partes.length).length;
+    const pdfs = [];
+    for (const parte of partes) {
+      const nome = partes.length > 1 ? `${raiz}_parte_${zeros(parte.n, largura)}de${partes.length}.pdf` : `${raiz}.pdf`;
+      progresso(0.7 + 0.3 * (parte.n - 1) / partes.length, { fase: "partes", atual: parte.n, total: partes.length, nome });
+      const doc = await PDFLib.PDFDocument.create({ updateMetadata: false });
+      const troco = seq.slice(parte.de - 1, parte.ate);
+      const indices = troco.filter(x => x.k === "src").map(x => x.i);
+      const copiadas = await doc.copyPages(origem, indices);
+      let c = 0;
+      const tam = i => { const { width, height } = origem.getPage(i).getMediaBox(); return [Math.abs(width), Math.abs(height)]; };
+      const [L, A] = tam(0);
+      for (const x of troco) {
+        if (x.k === "src") doc.addPage(copiadas[c++]);
+        else if (x.k === "branco") doc.addPage(tam(x.ref));
+        else if (x.k === "rosto") {
+          await paginaInfo(doc, L, A, `LOTE DBP · ${hoje}`, [
+            `${albuns.length} álbuns · ${seq.length} páginas (${info.length} do original + ${seq.length - info.length})`,
+            `Bloco 1 · com cópia: ${b1.length} álbuns`,
+            `Bloco 2 · sem cópia: ${b2.length} álbuns`,
+            `Bloco 3 · índices: ${nIndices} folhas (${blocos[3].albuns} álbuns)`,
+            `Folhas de etiqueta: ${contagem[3] / 2} · normais: ${contagem[1]}`,
+            `Conferência: ${b1.length} + ${b2.length} = ${b1.length + b2.length} ` +
+              (b1.length + b2.length === albuns.length ? "OK" : "ERRO"),
+          ], [
+            { titulo: `INSERÇÃO · A4-Normal · Somente na frente${partes.length > 1 ? ` (${partes.length} partes)` : ""}`,
+              texto: partes.flatMap(p => p.linhas.map(l => (partes.length > 1 ? `Parte ${p.n}: ${l}` : l))) },
+            { titulo: `OBSERVAÇÕES (${observacoes.length})`, colunas: 3,
+              lista: observacoes.map(o => `${o.id} · ${ondeTxt(o.etiqueta)}`) },
+          ]);
+        } else if (x.k === "sep1") {
+          await paginaInfo(doc, L, A, "BLOCO 1 · COM CÓPIA", [`${b1.length} álbuns`,
+            "Copiar: 1 face para 1 face", "1 cópia Atelier por álbum", "+ cópias de departamento, como hoje"], []);
+        } else if (x.k === "sep2") {
+          await paginaInfo(doc, L, A, "BLOCO 2 · SEM CÓPIA", [`${b2.length} álbuns (capas sem cópia)`, "Não copiar"],
+            [{ titulo: "ÁLBUNS", colunas: 2, lista: plano.bloco2.map(b => `${b.id}  ${b.modelo}`) }]);
+        } else if (x.k === "sep3") {
+          const porAlbum = new Map();
+          for (const y of seq.slice(sep3 + 1)) porAlbum.set(y.id, (porAlbum.get(y.id) || 0) + 1);
+          await paginaInfo(doc, L, A, "BLOCO 3 · ÍNDICES", [`${nIndices} folhas · ${porAlbum.size} álbuns`,
+            "Não copiar · juntar ao álbum na picagem", "Mesma ordem do Bloco 1"],
+            [{ titulo: "ÁLBUNS", colunas: 3, lista: [...porAlbum].map(([id, n]) => `${id}  (${n} fl.)`) }]);
+        }
+      }
+      const bytes = await doc.save();
+      const n = (await PDFLib.PDFDocument.load(bytes, { updateMetadata: false })).getPageCount();
+      if (n !== parte.total) {
+        throw new Error(`${nome} ficou com ${n} folhas em vez de ${parte.total}. Nada foi entregue: separe o PDF outra vez.`);
+      }
+      pdfs.push({ nome, bytes, folhas: n });
+    }
+    const soma = pdfs.reduce((s, p) => s + p.folhas, 0);
+    if (soma !== seq.length) {
+      throw new Error(`O lote ficou com ${soma} folhas em vez de ${seq.length}. Nada foi entregue: separe o PDF outra vez.`);
+    }
+    progresso(1);
+    return { albuns, plano, pdfs, nPaginas: info.length, avisos: [],
+      sequencia: seq.map(x => (x.k === "src" ? x.i : x.k === "branco" ? "branco" : x.k)), papeis: seq.map(x => x.papel) };
+  }
+
   return {
     PAPEL, PERFIL, TIPOS, FAMILIAS, MISTO, nomeTipo, separar, contarFolhas, nomeSeguro, semExtensao,
     // expostas para os testes
     palavras, imagens, numeroNoCabecalho, detectaEtiqueta, analisarPaginas, caixaDe, abrirParaLeitura, descricaoPaginas,
     verificarFormato, classificarAuto, composicao, intervalos, dividirLinhas, partirTrabalho, planoImpressao, pdfsPartes,
     LIMITE_CARACTERES, LIMITE_INSERCOES,
+    // modo Álbuns DBP - Divisão blocos (1.9)
+    NOME_MODO_BLOCOS, separarBlocos, lerPaginaBlocos, blocoDoAlbum, albunsDoPdf, sequenciaBlocos, partirLote,
   };
 })();
 </script>
@@ -1059,6 +1458,22 @@ function criarProgresso(el, tituloBase = document.title) {
   let ocupado = false;
   let aLer = false;       // a ler o PDF acabado de escolher
   let leituras = 0;       // conta as escolhas de PDF: uma leitura antiga que acabe tarde não conta
+  // Modo de operação (1.9): "original" (o de sempre, pela ordem do PDF) ou "blocos" (Álbuns DBP -
+  // Divisão blocos). Escolhido à mão; o modo em blocos nunca é escolhido sozinho.
+  let modo = "original";
+  const nomeModo = m => (m === "blocos" ? Logica.NOME_MODO_BLOCOS : "Original");
+  document.querySelectorAll("[data-nome-modo-blocos]").forEach(e => { e.textContent = Logica.NOME_MODO_BLOCOS; });
+  document.querySelectorAll('input[name="modo"]').forEach(r => r.addEventListener("change", () => {
+    if (!r.checked || ocupado) return;
+    modo = r.value;
+    // Mudar de modo deita fora o resultado: era de outro modo
+    if (trabalho) {
+      trabalho = null;
+      atualizarVista();
+      estadoPdf("Por separar");
+      estado(`Modo mudado para ${nomeModo(modo)} · carregue em Separar de novo`);
+    }
+  }));
 
   // ---------------------------------------------------------------- pop-ups (só avisos e erros)
   function mensagem(texto, tipo = "aviso") {
@@ -1171,6 +1586,7 @@ function criarProgresso(el, tituloBase = document.title) {
     $("btn-separar").disabled = sim;
     $("btn-separar").textContent = sim ? "A separar…" : "Separar";
     $("btn-pdf").disabled = sim;
+    document.querySelectorAll('input[name="modo"]').forEach(r => { r.disabled = sim; });
     atualizarVista();
   }
 
@@ -1192,6 +1608,8 @@ function criarProgresso(el, tituloBase = document.title) {
       await mensagem("As bibliotecas de PDF não carregaram. Recarregue a página.", "erro");
       return;
     }
+
+    if (modo === "blocos") { await separarBlocos(); return; }
 
     // O resultado anterior sai já de cena: se esta separação falhar, não fica à vista um plano
     // que já não corresponde a este PDF.
@@ -1372,6 +1790,8 @@ function criarProgresso(el, tituloBase = document.title) {
     const nPartes = plano.partes.length;
 
     // Conferência: total, etiquetas, normais e continuações
+    $("stat-total-txt").textContent = "Folhas no total";
+    $("stat-etiqueta-txt").textContent = "Folhas A4-Etiqueta";
     $("stat-total").textContent = fmt(plano.total);
     $("stat-etiqueta").textContent = fmt(plano.contagem[3]);
     $("stat-normal").textContent = fmt(plano.contagem[1]);
@@ -1399,6 +1819,156 @@ function criarProgresso(el, tituloBase = document.title) {
         : `Plano: ${plano.contagem[3]} ${PAPEL[3]} + ${plano.contagem[1]} ${PAPEL[1]} = ${conta}`) +
       ` folhas ${original === conta ? "✓" : "✗"}`;
     $("linha-conferencia").dataset.tipo = original === conta ? "idle" : "erro";
+    $("vista").scrollTop = 0;
+    atualizarVista();
+  }
+
+  // ---------------------------------------------------------------- modo Álbuns DBP - Divisão blocos
+  async function separarBlocos() {
+    trabalho = null;
+    const atual = pdf;
+    let erro = null;
+    tamanhoAtual = tamanho(atual.dados.byteLength);
+    setOcupado(true);
+    barraProgresso.iniciar(`A abrir o PDF · ${tamanhoAtual}`);
+    estado(`A separar ${atual.nome} em blocos…`, "ativo");
+    estadoPdf("A separar…", "ativo");
+    try {
+      const res = await Logica.separarBlocos(atual.dados, atual.nome, { progresso });
+      barraProgresso.fase("A conferir as folhas com o original…");
+      // Conferência independente, com o pdf.js: o original tem as folhas que o lote usou, cada PDF
+      // gerado as da sua parte, e todos juntos as do lote
+      const folhasOriginal = await Logica.contarFolhas(atual.dados);
+      const folhasPartes = [];
+      for (const c of res.pdfs) folhasPartes.push(await Logica.contarFolhas(c.bytes));
+      const { plano } = res;
+      const soma = folhasPartes.includes(null) ? null : folhasPartes.reduce((s, n) => s + n, 0);
+      const parteErrada = plano.partes.find((p, k) => folhasPartes[k] !== p.total);
+      const txt = n => (n === null ? "?" : String(n));
+      if (folhasOriginal !== plano.nOriginal || res.pdfs.length !== plano.partes.length || parteErrada || soma !== plano.total) {
+        erro = `O original tem ${txt(folhasOriginal)} folhas e o lote usou ${plano.nOriginal}; ` +
+          `os PDFs gerados têm ${folhasPartes.map(txt).join(" + ")} páginas em vez de ${plano.total}. ` +
+          "Este PDF não passa para a impressão.";
+        estadoPdf(`✗ ${plano.total}/${txt(soma)} páginas — não imprimir`, "erro");
+      } else {
+        trabalho = {
+          modo: "blocos", nome: atual.nome, plano, nAlbuns: res.albuns.length, folhasOriginal, folhasPartes,
+          pdfs: res.pdfs.map(c => ({ nome: c.nome, blob: new Blob([c.bytes], { type: "application/pdf" }) })),
+        };
+        estadoPdf(`OK · ${plano.total} páginas no lote · ${folhasOriginal}/${plano.nOriginal} do original ✓`, "ok");
+      }
+    } catch (e) {
+      console.warn(e);
+      erro = e.message || String(e);
+      estadoPdf(`✗ ${erro}`, "erro");
+    } finally {
+      setOcupado(false);
+      barraProgresso.concluir(!erro && !!trabalho);
+    }
+    if (erro || !trabalho) {
+      trabalho = null;
+      atualizarVista();
+      estado("O PDF não foi separado", "erro");
+      await mensagem(`O PDF não foi separado.\n\n${erro || "Motivo desconhecido."}`, "erro");
+      return;
+    }
+    mostrarBlocos();
+    const n = trabalho.plano.partes.length;
+    estado(n > 1 ? `Pronto a imprimir · descarregue as ${n} partes` : "Pronto a imprimir · descarregue o lote", "ok");
+  }
+
+  // Onde fica uma página do lote: "pág. 103" ou, com partes, "parte 2, pág. 14"
+  const ondeTxt = l => (trabalho.plano.partes.length > 1 ? `parte ${l.parte}, pág. ${l.pagina}` : `pág. ${l.lote}`);
+  const paginasTxt = (de, ate) => (de === ate ? `página ${de}` : `páginas ${de}–${ate}`);
+
+  function cartaoBlocos(parte, k) {
+    const { plano, pdfs } = trabalho;
+    const n = plano.partes.length;
+    const cartao = el("div", { className: "card plano" });
+    if (n > 1) {
+      cartao.append(el("div", { className: "parte-topo" },
+        el("b", { textContent: `Parte ${parte.n} de ${n}` }),
+        el("span", { className: "nota", textContent: `${plural(parte.total, "página", "páginas")} · ${paginasTxt(parte.de, parte.ate)} do lote` })));
+    }
+    const ficheiro = pdfs[k];
+    const botao = el("button", { className: "btn-principal azul", type: "button",
+      textContent: n > 1 ? `Descarregar parte ${parte.n}` : "Descarregar lote" });
+    botao.addEventListener("click", () => descarregar(ficheiro.blob, ficheiro.nome));
+    cartao.append(
+      passo("PDF", valor(botao, el("span", { className: "ficheiro", textContent: ficheiro.nome })),
+        "Abrir no Acrobat e imprimir inteiro (Páginas: Tudo), num só trabalho."),
+      passo("Impressora", valor(
+        el("span", { textContent: "Fonte de papel:" }), pillPapel(3),
+        el("span", { className: "pill neutro", textContent: "FRENTE E VERSO" })),
+        "O perfil de frente e verso da gaveta das etiquetas: cada álbum ocupa uma etiqueta, a folha principal na frente."));
+    if (parte.paginasInseridas.length) {
+      cartao.append(
+        passo("Folhas de inserção", valor(
+          el("span", { textContent: "Fonte de papel:" }), pillPapel(1),
+          el("span", { textContent: "Imprimir em: Somente na frente" })),
+          "Propriedades › Fonte de papel › Seleção do papel: Folhas de inserção › Configurações › Folhas inseridas"),
+        passo("Inserir", el("div", { className: "inserir" }, ...parte.linhas.map((l, i) => linhaInserir(l, i, parte)))));
+    }
+    return cartao;
+  }
+
+  // Lista de álbuns num cartão: título, nota e uma linha por álbum
+  function cartaoLista(titulo, nota, linhas) {
+    return el("div", { className: "card plano" },
+      el("div", { className: "parte-topo" }, el("b", { textContent: titulo }), el("span", { className: "nota", textContent: nota })),
+      el("div", { className: "lista-ids" }, ...linhas));
+  }
+
+  function mostrarBlocos() {
+    const t = trabalho, plano = t.plano, b = plano.blocos;
+    const nPartes = plano.partes.length;
+    $("stat-total-txt").textContent = "Páginas no lote";
+    $("stat-etiqueta-txt").textContent = "Folhas A4-Etiqueta · frente e verso";
+    $("stat-normal-txt").textContent = "Folhas A4-Normal";
+    $("stat-total").textContent = fmt(plano.total);
+    $("stat-etiqueta").textContent = fmt(plano.contagem[3] / 2);
+    $("stat-normal").textContent = fmt(plano.contagem[1]);
+    $("nome-trabalho").replaceChildren(el("b", { textContent: t.nome }),
+      el("span", { className: "pill neutro", textContent: Logica.NOME_MODO_BLOCOS }));
+    $("linha-tipos").textContent = `${plural(t.nAlbuns, "álbum", "álbuns")}  ·  Bloco 1 com cópia: ${b[1].albuns}  ·  ` +
+      `Bloco 2 sem cópia: ${b[2].albuns}  ·  Bloco 3 índices: ${plural(b[3].folhas, "folha", "folhas")} de ${b[3].albuns}`;
+    $("nota-trabalho").hidden = nPartes === 1;
+    $("nota-trabalho").textContent = nPartes > 1
+      ? `Mais de ${Logica.LIMITE_INSERCOES} folhas de inserção: o lote foi partido em ${nPartes} partes. ` +
+        "Descarregue-as e imprima-as pela ordem, cada uma inteira."
+      : "";
+
+    const depois = el("div", { className: "card plano" },
+      el("div", { className: "parte-topo" }, el("b", { textContent: "Depois de imprimir" }),
+        el("span", { className: "nota", textContent: "páginas do lote; cada bloco abre com uma folha separadora" })),
+      passo("Bloco 1", valor(`${paginasTxt(b[1].de, b[1].ate)} · ${plural(b[1].albuns, "álbum", "álbuns")}`),
+        "Validar as observações, depois copiar em 1 face → 1 face: 1 cópia para o Atelier. Cópias de departamento à mão."),
+      passo("Bloco 2", valor(b[2].albuns ? `${paginasTxt(b[2].de, b[2].ate)} · ${plural(b[2].albuns, "álbum", "álbuns")}` : "Vazio"),
+        "Não copiar."),
+      passo("Bloco 3", valor(b[3].folhas ? `${paginasTxt(b[3].de, b[3].ate)} · ${plural(b[3].folhas, "folha", "folhas")} de ${plural(b[3].albuns, "álbum", "álbuns")}` : "Vazio"),
+        "Não copiar. Na picagem, juntar cada folha ao seu álbum: estão pela ordem do Bloco 1, com o número no topo."));
+
+    const extras = [depois];
+    if (plano.observacoes.length) {
+      extras.push(cartaoLista(`Observações (${plano.observacoes.length})`, "validar antes de copiar o Bloco 1",
+        plano.observacoes.map(o => el("div", {}, el("b", { textContent: o.id }), ` · ${ondeTxt(o.etiqueta)}` +
+          (o.extra.length ? ` · também ${o.extra.map(ondeTxt).join(", ")}` : "")))));
+    }
+    if (plano.continuacoes.length) {
+      extras.push(cartaoLista(`Continuações com dados (${plano.continuacoes.length})`,
+        "a etiqueta fica com o verso em branco e a continuação sai a seguir, em A4-Normal",
+        plano.continuacoes.map(c => el("div", {}, el("b", { textContent: c.id }),
+          ` · etiqueta ${ondeTxt(c.etiqueta)} · continuação ${c.extra.map(ondeTxt).join(", ")}`))));
+    }
+    $("partes").replaceChildren(...plano.partes.map(cartaoBlocos), ...extras);
+
+    const { folhasOriginal, folhasPartes } = t;
+    const soma = folhasPartes.reduce((s, n) => s + n, 0);
+    $("linha-conferencia").textContent = `"${t.nome}" = ${folhasOriginal} folhas  |  ` +
+      `Lote: ${plano.nOriginal} do original + ${plano.acrescentadas} acrescentadas = ${plano.total} páginas` +
+      (nPartes > 1 ? `  |  Partes: ${folhasPartes.join(" + ")} = ${soma}` : "") +
+      ` ${folhasOriginal === plano.nOriginal && soma === plano.total ? "✓" : "✗"}`;
+    $("linha-conferencia").dataset.tipo = folhasOriginal === plano.nOriginal && soma === plano.total ? "idle" : "erro";
     $("vista").scrollTop = 0;
     atualizarVista();
   }
