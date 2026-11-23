@@ -5,7 +5,7 @@ Prepara a impressão do PDF de encomendas (o "binder"), que mistura folhas de do
 
 - **App:** https://nhmac.github.io/Proc-Separador/ (Chrome ou Edge; pode ser instalada como app)
 - **Repositório:** https://github.com/nhmac/Proc-Separador (código-fonte no `main`; o site é gerado e publicado pelo GitHub Actions)
-- **Versão atual:** web 1.9.1
+- **Versão atual:** web 1.9.2
 
 O PDF é lido no browser e não é enviado para lado nenhum.
 
