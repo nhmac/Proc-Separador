@@ -5,7 +5,7 @@ Prepara a impressão do PDF de encomendas (o "binder"), que mistura folhas de do
 
 - **App:** https://nhmac.github.io/Proc-Separador/ (Chrome ou Edge; pode ser instalada como app)
 - **Repositório:** https://github.com/nhmac/Proc-Separador (código-fonte no `main`; o site é gerado e publicado pelo GitHub Actions)
-- **Versão atual:** web 1.8
+- **Versão atual:** web 1.9
 
 O PDF é lido no browser e não é enviado para lado nenhum.
 
@@ -22,6 +22,11 @@ Fluxo (desde a 1.2; o modo antigo com ZIP e blocos saiu da web na 1.4):
    fonte de papel e as linhas para copiar para o campo **Inserir**.
 4. O driver só aceita 100 folhas de inserção por trabalho. Acima disso, a app parte o trabalho em
    partes: descarregar cada parte e imprimi-las pela ordem, cada uma inteira.
+
+Desde a 1.9 há um segundo modo, escolhido à mão na página: **Álbuns DBP - Divisão blocos**. Recebe o PDF
+combinado dos álbuns DreambooksPRO do dia e devolve um PDF novo, em blocos (com cópia, sem cópia e
+índices), para imprimir em frente e verso nas etiquetas com as folhas normais como folhas de inserção.
+É a única exceção à ordem do original (ver o `CLAUDE.md`). O modo Original não mudou.
 
 ## Atualizar a app
 
