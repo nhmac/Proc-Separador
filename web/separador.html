@@ -275,7 +275,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.9.1</div>
+      <div class="versao">Versão web 1.9.2</div>
     </div>
   </aside>
 
@@ -1579,6 +1579,17 @@ function criarProgresso(el, tituloBase = document.title) {
     return new Promise(ok => d.addEventListener("close", ok, { once: true }));
   }
 
+  // Mais de um ficheiro para descarregar (acima de LIMITE_INSERCOES folhas de inserção): pop-up à parte,
+  // a pedido do utilizador (2026-11-23), para não se imprimir só uma parte ou trocar as linhas do Inserir
+  function avisoPartes(partes, nomes, oQue) {
+    return mensagem(`${oQue[0].toUpperCase()}${oQue.slice(1)} tem ${partes.length} ficheiros para descarregar e imprimir, ` +
+      `não um só.\n\nPassou de ${Logica.LIMITE_INSERCOES} folhas de inserção, o máximo do driver por trabalho, ` +
+      `e foi partido em ${partes.length} partes:\n\n` +
+      partes.map((p, k) => `  Parte ${p.n}: ${nomes[k]} · ${p.total} folhas · ${p.paginasInseridas.length} inserções`).join("\n") +
+      "\n\n1. Descarregue todas as partes.\n\n2. Imprima-as pela ordem (parte 1, depois parte 2…), cada uma inteira, " +
+      "num trabalho à parte.\n\n3. Em cada parte, use só a linha do Inserir do cartão dessa parte.");
+  }
+
   function estado(texto, tipo = "idle") {
     $("estado").textContent = texto;
     $("estado").dataset.tipo = tipo;
@@ -1769,6 +1780,7 @@ function criarProgresso(el, tituloBase = document.title) {
     mostrarTrabalho();
     const nPartes = trabalho.plano.partes.length;
     estado(nPartes > 1 ? `Pronto a imprimir · descarregue as ${nPartes} partes` : "Pronto a imprimir", "ok");
+    if (nPartes > 1) await avisoPartes(trabalho.plano.partes, trabalho.pdfs.map(p => p.nome), "este trabalho");
     if (avisos.length) await mensagem(avisos.join("\n\n"));
   });
 
@@ -1968,6 +1980,7 @@ function criarProgresso(el, tituloBase = document.title) {
     mostrarBlocos();
     const n = trabalho.plano.partes.length;
     estado(n > 1 ? `Pronto a imprimir · descarregue as ${n} partes` : "Pronto a imprimir · descarregue o lote", "ok");
+    if (n > 1) await avisoPartes(trabalho.plano.partes, trabalho.pdfs.map(p => p.nome), "este lote");
   }
 
   // Onde fica uma página do lote: "pág. 103" ou, com partes, "parte 2, pág. 14"
