@@ -278,7 +278,9 @@ combinado 19/11  886 pág, 404 álbuns, 284 MB     -> 894 pág  1-2,183,318,407,
 298 PDFs de teste combinados, 582 pág            -> 639 pág  1-2,35,254,285,306,389,396,437,606-639
 20/11 com limite 30 (teste das partes)           -> 3 partes: 532 + 30 + 6, 30/30/6 inserções, a sequência igual à de uma só parte
 ```
-Recusas testadas: álbum repetido, folha sem o código do álbum, PDF a começar numa folha de índice, PDF em branco. Por testar com um PDF real: a recusa de um PDF Dreambooks / Fotoprix neste modo.
+Recusas testadas: álbum repetido, folha sem o código do álbum, PDF a começar numa folha de índice, PDF em branco, e (2026-11-23, com folhas reais trazidas pelo utilizador: `3482740_2071692_label.pdf` Dreambooks e `10256574_10361830_processed_label.pdf` Fotoprix) um PDF Dreambooks, um Fotoprix e um misto com álbuns DBP: os três recusados neste modo e aceites no modo Original.
+
+Depois da validação das observações, os Basic do bloco 2 podem ficar fora da ordem das pastas nas folhas físicas (decisão do utilizador, 2026-11-23): não é preciso repô-los na ordem.
 
 ## Invariantes que não se podem quebrar
 
