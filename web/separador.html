@@ -83,7 +83,7 @@
   .btn-principal.azul { background: var(--accent); }
   .btn-principal.azul:hover:not(:disabled) { background: var(--accent-hover); }
   .btn-principal.azul:disabled { background: var(--card); color: var(--texto-sec); }
-  /* Modo de operação (1.9): Original ou Álbuns DBP - Divisão blocos, escolhido à mão */
+  /* Modo de operação (1.9; "Original" chama-se "Normal" desde a 1.9.3): Normal ou Álbuns DBP - Divisão blocos, escolhido à mão */
   .modos { display: grid; gap: 8px; }
   .modo {
     display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; cursor: pointer;
@@ -93,6 +93,7 @@
   .modo:has(input:checked) { border-color: var(--accent); background: var(--accent-suave); }
   .modo:has(input:disabled) { cursor: default; opacity: .6; }
   .modo input { margin: 0; accent-color: var(--accent); flex: none; }
+  .modo .desc { display: block; margin-top: 2px; font-size: 12px; color: var(--texto-sec); line-height: 1.35; }
   .versao { font-size: 12px; color: var(--texto-sec); text-align: center; opacity: .7; }
 
   /* -------------------------------------------------------- Área principal */
@@ -256,8 +257,8 @@
 
     <div class="secao" id="rotulo-modos">Modo</div>
     <div class="modos" role="radiogroup" aria-labelledby="rotulo-modos">
-      <label class="modo"><input type="radio" name="modo" value="original" checked><span>Original</span></label>
-      <label class="modo"><input type="radio" name="modo" value="blocos"><span data-nome-modo-blocos>Álbuns DBP - Divisão blocos</span></label>
+      <label class="modo"><input type="radio" name="modo" value="original" checked><span>Normal<span class="desc">Imprime o PDF pela ordem em que está. Serve para todos os PDFs DBP, DBC e FTX.</span></span></label>
+      <label class="modo"><input type="radio" name="modo" value="blocos"><span><span data-nome-modo-blocos>Álbuns DBP - Divisão blocos</span><span class="desc">Só para álbuns DBP. Separa o lote em blocos: com cópia, sem cópia e índices.</span></span></label>
     </div>
     <div class="secao">PDF</div>
     <button class="btn" id="btn-pdf" type="button">Escolher PDF…</button>
@@ -275,7 +276,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.9.2</div>
+      <div class="versao">Versão web 1.9.3</div>
     </div>
   </aside>
 
@@ -1278,7 +1279,7 @@ const Logica = (() => {
       verificarFormato(info, rotacoes, efetivo);
       if (efetivo !== "express") {
         throw new Error(`O modo ${NOME_MODO_BLOCOS} é só para os álbuns DreambooksPRO (folhas DreambooksPro Express), ` +
-          `e este PDF tem folhas ${FAMILIAS.album}; nada foi escrito.\n\nPara outros PDFs, use o modo Original.`);
+          `e este PDF tem folhas ${FAMILIAS.album}; nada foi escrito.\n\nPara outros PDFs, use o modo Normal.`);
       }
       albuns = albunsDoPdf(info, paginas);
     } finally {
@@ -1554,7 +1555,7 @@ function criarProgresso(el, tituloBase = document.title) {
   // Modo de operação (1.9): "original" (o de sempre, pela ordem do PDF) ou "blocos" (Álbuns DBP -
   // Divisão blocos). Escolhido à mão; o modo em blocos nunca é escolhido sozinho.
   let modo = "original";
-  const nomeModo = m => (m === "blocos" ? Logica.NOME_MODO_BLOCOS : "Original");
+  const nomeModo = m => (m === "blocos" ? Logica.NOME_MODO_BLOCOS : "Normal");
   document.querySelectorAll("[data-nome-modo-blocos]").forEach(e => { e.textContent = Logica.NOME_MODO_BLOCOS; });
   document.querySelectorAll('input[name="modo"]').forEach(r => r.addEventListener("change", () => {
     if (!r.checked || ocupado) return;
