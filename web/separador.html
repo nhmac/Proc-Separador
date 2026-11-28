@@ -276,7 +276,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.9.3</div>
+      <div class="versao">Versão web 1.9.4</div>
     </div>
   </aside>
 
@@ -1875,7 +1875,7 @@ function criarProgresso(el, tituloBase = document.title) {
         "Abrir no Acrobat e imprimir inteiro (Páginas: Tudo), num só trabalho."));
     }
     cartao.append(passo("Impressora", valor(
-      el("span", { textContent: "Fonte de papel:" }), pillPapel(plano.base))));
+      el("span", { textContent: "Papel principal:" }), pillPapel(plano.base))));
     if (!parte.paginasInseridas.length) {
       cartao.append(passo("Folhas de inserção", valor(
         `Nenhuma: todas as folhas são ${PAPEL[plano.base]}. Imprimir só com o perfil acima, sem Folhas de inserção.`)));
@@ -1883,7 +1883,7 @@ function criarProgresso(el, tituloBase = document.title) {
     }
     cartao.append(
       passo("Folhas de inserção", valor(
-        el("span", { textContent: "Fonte de papel:" }), pillPapel(plano.gavetaInseridas),
+        el("span", { textContent: "Papel:" }), pillPapel(plano.gavetaInseridas),
         el("span", { textContent: "Imprimir em: Somente na frente" })),
         "Propriedades › Fonte de papel › Seleção do papel: Folhas de inserção › Configurações › Folhas inseridas"),
       passo("Inserir", el("div", { className: "inserir" }, ...parte.linhas.map((l, i) => linhaInserir(l, i, parte)))));
@@ -2005,13 +2005,13 @@ function criarProgresso(el, tituloBase = document.title) {
       passo("PDF", valor(botao, el("span", { className: "ficheiro", textContent: ficheiro.nome })),
         "Abrir no Acrobat e imprimir inteiro (Páginas: Tudo), num só trabalho."),
       passo("Impressora", valor(
-        el("span", { textContent: "Fonte de papel:" }), pillPapel(3),
+        el("span", { textContent: "Papel principal:" }), pillPapel(3),
         el("span", { className: "pill neutro", textContent: "FRENTE E VERSO" })),
         "O perfil de frente e verso da gaveta das etiquetas: cada álbum ocupa uma etiqueta, a folha principal na frente."));
     if (parte.paginasInseridas.length) {
       cartao.append(
         passo("Folhas de inserção", valor(
-          el("span", { textContent: "Fonte de papel:" }), pillPapel(1),
+          el("span", { textContent: "Papel:" }), pillPapel(1),
           el("span", { textContent: "Imprimir em: Somente na frente" })),
           "Propriedades › Fonte de papel › Seleção do papel: Folhas de inserção › Configurações › Folhas inseridas"),
         passo("Inserir", el("div", { className: "inserir" }, ...parte.linhas.map((l, i) => linhaInserir(l, i, parte)))));
