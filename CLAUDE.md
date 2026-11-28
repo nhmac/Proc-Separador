@@ -141,7 +141,7 @@ Em emergência, a forma mais rápida de repor o site é reconstruir a fonte como
 - A Canon 2 está instalada no Windows como **uma impressora por perfil**: `Canon 2 › Cor › Gaveta 3` (A4-Etiqueta) e `Canon 2 › Cor › Gaveta 1` (A4-Normal). Estes nomes estão em `PERFIL`.
 - Caminho no driver: Propriedades → Fonte de papel → Seleção do papel: **Folhas de inserção** → Configurações de folhas de inserção → tipo **Folhas inseridas**, com Fonte de papel, **Imprimir em: Somente na frente** e o campo **Inserir**.
 - Com "Somente na frente", a folha inserida **substitui** a página indicada; não acrescenta folhas.
-- O campo aceita números e intervalos separados por vírgulas, sem espaços (`3,5,7-12`). **Testados:** 344 caracteres e 100 páginas numa só entrada, sem problemas.
+- O campo aceita números e intervalos separados por vírgulas, sem espaços (`3,5,7-12`). **Testados:** 344 caracteres e 100 páginas numa só entrada, sem problemas. **Limite do campo (teste de 2026-11-28): 399 caracteres.** Uma linha de 399 (100 números de 3 algarismos, `101,103,…,299`) entra inteira; numa de 499 (`1001,1003,…,1199`) o campo **corta o resto sem avisar** e só ficam os números até 1159 (80 números, 399 caracteres). Por isso a app tem de continuar a partir as linhas e a mostrar as folhas de cada uma.
 - Páginas repetidas entre entradas bloqueiam o botão Adicionar.
 - **Limite de 100 folhas de inserção** (teste de 2026-10-01): `1-100` é aceite; com `1-101` o botão **Adicionar** fica cinzento. O driver **recusa**, não corta em silêncio.
 - Os números são os das páginas **do trabalho enviado**: imprime-se sempre o PDF inteiro (Páginas: Tudo). Por isso, com várias partes, as linhas do Inserir estão na **numeração de cada parte** (1…total da parte), nunca na do original.
@@ -157,7 +157,7 @@ Em emergência, a forma mais rápida de repor o site é reconstruir a fonte como
 - `planoImpressao(info)`:
   - base = papel com mais folhas **do PDF inteiro** (empate: A4-Etiqueta). É **o mesmo perfil em todas as partes**;
   - `partes: [{n, de, ate, total, contagem, paginasInseridas, linhas, folhasPorLinha}]`: `de`/`ate` são páginas do original (base 1); `paginasInseridas` e `linhas` estão na numeração da parte, em intervalos sem espaços (`intervalos()`);
-  - `dividirLinhas()` junta-as em linhas de no máximo `LIMITE_CARACTERES` (300), cortando **só nas vírgulas**; `folhasPorLinha` dá as folhas de cada uma;
+  - `dividirLinhas()` junta-as em linhas de no máximo `LIMITE_CARACTERES` (399 desde a 1.9.5; até à 1.9.4 era 300), cortando **só nas vírgulas**; `folhasPorLinha` dá as folhas de cada uma;
   - no topo ficam `total`, `contagem`, `base`, `perfilBase`, `gavetaInseridas`, `paginasInseridas` (na numeração do original, **só para contagens**), `semInsercoes`, `continuacoes` e `avisos`. **`linhas` e `folhasPorLinha` já não existem no topo**: com várias partes estariam na numeração do original e seriam perigosas;
   - cada continuação tem `pagina` (original), `parte` e `paginaNaParte`;
   - `avisos`: continuação sem número (o mesmo `ATENÇÃO` do Python, `avisoSemNumero()`); continuação que não vem logo a seguir a uma folha da mesma encomenda; encomenda repartida entre partes. O aviso "acima de 100 não foi testado" da 1.2 **saiu**;
@@ -171,7 +171,7 @@ Em emergência, a forma mais rápida de repor o site é reconstruir a fonte como
 
 **Por confirmar (não bloqueia):**
 
-1. se os 100 são **no total do trabalho** ou **por entrada**. O teste foi com uma só entrada e não distingue os dois casos; partes de ≤ 100 funcionam em ambos. Teste barato: adicionar `1-100` e depois tentar adicionar `101-102`.
+1. ~~se os 100 são **no total do trabalho** ou **por entrada**~~ — **resolvido a 2026-11-28: no total do trabalho** (ver os resultados abaixo). O teste foi com uma só entrada e não distingue os dois casos; partes de ≤ 100 funcionam em ambos. Teste barato: adicionar `1-100` e depois tentar adicionar `101-102`.
    - Recusado → o limite é total, a implementação fica como está.
    - Aceite → o limite é por entrada: bastaria limitar cada linha a 100 folhas e voltar a um só trabalho (alteração pequena, **só com pedido do utilizador**);
 2. quantas **entradas** a lista do driver aceita. Nunca foram testadas várias entradas seguidas. Com 100 folhas no máximo por parte, uma parte só passa de uma linha com muitas folhas isoladas (100 folhas isoladas de 3 dígitos dão 2 linhas);
@@ -179,7 +179,7 @@ Em emergência, a forma mais rápida de repor o site é reconstruir a fonte como
 
 O que protege:
 - partes com 100 inserções no máximo, verificado no `partirTrabalho()` antes de escrever;
-- linhas de 300 caracteres no máximo, abaixo dos 344 testados;
+- linhas de 399 caracteres no máximo (desde a 1.9.5), o limite testado do campo, acima do qual o driver corta sem avisar. Com 100 inserções por parte e páginas até 999, uma parte cabe sempre numa só linha (o pior caso, 100 folhas soltas de 3 algarismos, dá exatamente 399); só com números de 4 algarismos pode haver duas;
 - o nº de folhas de cada linha do Inserir, mostrado por cima dela no cartão (e o total da parte em "Folhas inseridas"), para conferir com a lista do driver. O guia, com o "confirmar N linhas na lista", os pontos de verificação e a JUNÇÃO entre partes, saiu na 1.6.
 
 Como testar sem gastar papel: fazer os passos até ao fim e carregar em **Cancelar**, confirmando que cada linha entra inteira, que o Adicionar funciona em todas e que a contagem da lista bate com a da página.
@@ -193,6 +193,8 @@ Resultados dos testes do driver (registar aqui os novos, quando o utilizador os 
 
 - 2026-09-30 — `binder-álbuns-amador.pdf` triplicado pelo utilizador (`binder-álbuns-amador-x3.pdf`): 504 páginas, 123 inseridas, **uma só linha de 269 caracteres** na 1.2.
 - 2026-10-01 — `1-100` aceite; `1-101` recusado (Adicionar cinzento). Com a 1.3 o triplicado dá 2 partes: 392 folhas com 100 inserções e 112 folhas com 23. Falta imprimir um lote real em partes e fazer o teste "por entrada ou no total".
+- 2026-11-28 — **teste "por entrada ou no total" feito: o limite é no total do trabalho.** Depois de adicionar `1-100`, a lista do driver (Insert Sheets Settings › Setting List) mostra uma linha por página (89, 90, … 100) e, ao adicionar `101-102`, aparece "Warning: Data is full. Delete unnecessary data.". Ou seja, 100 páginas inseridas por trabalho, contadas página a página, seja qual for o número de linhas. As partes continuam a ser necessárias acima de 100.
+- 2026-11-28 — **limite de caracteres do campo Inserir**: uma parte real com 100 inserções em 346 caracteres (que a app partia em 88 + 12 folhas) entrou colada numa só linha; com o PDF de teste de 1200 páginas em branco, a linha de 399 caracteres (`101,…,299`) entrou inteira e a de 499 (`1001,…,1199`) ficou cortada na 1159 (399 caracteres), sem aviso. O `LIMITE_CARACTERES` passou de 300 para 399 na 1.9.5.
 
 ## O domínio, em três conceitos
 
@@ -255,6 +257,8 @@ Desde a **1.9** (2026-11-23), a pedido do utilizador, a página tem um seletor *
 Desde a **1.9.3** (2026-11-27, a pedido do utilizador) cada modo tem uma descrição curta por baixo do nome (`.modo .desc`): Normal = "Imprime o PDF pela ordem em que está. Serve para todos os PDFs DBP, DBC e FTX."; Álbuns DBP = "Só para álbuns DBP. Separa o lote em blocos: com cópia, sem cópia e índices." A lógica não mudou.
 
 Na **1.9.4** (2026-11-28, a pedido do utilizador) os passos dos dois modos passam a dizer **"Papel principal:"** (Impressora) e **"Papel:"** (Folhas de inserção), em vez de "Fonte de papel:". Só muda o texto visível.
+
+Na **1.9.5** (2026-11-28, a pedido do utilizador, para não confundir os utilizadores com várias linhas) o `LIMITE_CARACTERES` passa de 300 para **399**, o limite medido do campo Inserir (ver "Resultados dos testes do driver"). Nos dois modos, cada parte passa a ter uma só linha do Inserir (até 999 páginas). O resto da lógica não muda.
 
 É a **única exceção à invariante 1** (ordem do original), decidida pelo utilizador: dentro de cada álbum a ordem das folhas mantém-se e as continuações com dados ficam sempre coladas; só mudam de sítio os álbuns sem cópia (bloco 2) e as folhas de índice a mais (bloco 3). As páginas do original nunca são alteradas: só se reordenam e se acrescentam a folha de rosto, os separadores e versos em branco.
 
@@ -460,7 +464,7 @@ Nunca escrever nas pastas do utilizador durante os testes: usar o scratchpad da 
    - chamar a lógica com `page.evaluate` e devolver os bytes em base64. Com PDFs de 78 MB é mais simples a página fazer `fetch` do PDF ao servidor de teste e devolver cada ficheiro gerado com um `POST` ao mesmo servidor, que o grava no scratchpad (isto vive só no script de teste, nunca na app).
 3. **Regressão:** nos três binders, nos dois `v1.5/Binder*.pdf` e no `Binder1-x12.pdf`, o `info`, o `plano` e os `avisos` iguais à referência, e os **PDFs das partes** byte a byte iguais (o pdf-lib com `updateMetadata: false` é determinístico). Os binders normais têm `partes.length === 1` e `pdfs.length === 0`; o triplicado e o `Binder1-x12.pdf`, 2. Cada PDF com o tipo errado tem de ser recusado.
 4. **Unitários** do plano com `info` forjado:
-   - lista longa (linhas ≤ 300, cortes só nas vírgulas, as linhas juntas dão as páginas todas);
+   - lista longa (linhas ≤ 399, cortes só nas vírgulas, as linhas juntas dão as páginas todas);
    - mais normais do que etiquetas → base 1;
    - empate → base 3;
    - sem inserções;

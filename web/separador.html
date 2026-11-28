@@ -276,7 +276,7 @@
 
     <div class="rodape">
       <button class="btn-principal" id="btn-separar" type="button">Separar</button>
-      <div class="versao">Versão web 1.9.4</div>
+      <div class="versao">Versão web 1.9.5</div>
     </div>
   </aside>
 
@@ -368,7 +368,7 @@ const Logica = (() => {
   // Impressão num só trabalho: a Canon está instalada no Windows como uma impressora por
   // perfil. O perfil base leva o papel maioritário; o outro entra como folhas de inserção.
   const PERFIL = { 3: "Canon 2 › Cor › Gaveta 3", 1: "Canon 2 › Cor › Gaveta 1" };
-  const LIMITE_CARACTERES = 300;        // por entrada do campo Inserir do driver (testados 344)
+  const LIMITE_CARACTERES = 399;        // por entrada do campo Inserir do driver (testado a 2026-11-28: 399 passa; acima corta sem avisar)
   const LIMITE_INSERCOES = 100;         // folhas de inserção por trabalho: o driver aceita 1-100 e
                                         // com 1-101 bloqueia o botão Adicionar
 
